@@ -4,5 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-minecraft_data_types = { version = "0.1.0", git="https://github.com/Minecraft-rs/MinecraftTypes" }
+minecraft_data_types = { version = "0.1.0", git = "https://github.com/Minecraft-rs/MinecraftTypes" }
 anyhow = "1.0.44"
