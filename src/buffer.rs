@@ -5,6 +5,7 @@ use std::io::Cursor;
 pub enum BufferState {
     Waiting,
     PacketReady,
+    Error(String),
 }
 
 pub struct MinecraftPacketBuffer {
@@ -53,7 +54,11 @@ impl MinecraftPacketBuffer {
             return if self.is_packet_available() {
                 BufferState::PacketReady
             } else {
-                BufferState::Waiting
+                if self.decoded.capacity() == self.decoded.len() {
+                    BufferState::Error(String::from("Next packet was too big to decode, something went wrong."))
+                } else {
+                    BufferState::Waiting
+                }
             };
         }
 
