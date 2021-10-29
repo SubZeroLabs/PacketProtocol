@@ -68,7 +68,7 @@ macro_rules! registry {
 
             paste! {
                 impl $registry_name {
-                    pub fn read_packet_uncompressed(handler: &impl [<$registry_name Handler>], reader: &mut impl std::io::Read) -> anyhow::Result<()> {
+                    pub fn read_packet_uncompressed(handler: &mut impl [<$registry_name Handler>], reader: &mut impl std::io::Read) -> anyhow::Result<()> {
                         let uncompressed_packet = $crate::packet::UncompressedPacket::decode(reader)?;
                         let (packet_id, data_cursor) = uncompressed_packet.into_packet_cursor(reader)?;
                         let lazy_handler = SimpleLazyHandle::new(data_cursor);
@@ -85,9 +85,9 @@ macro_rules! registry {
                     }
                 }
                 pub trait [<$registry_name Handler>] {
-                    fn handle_default<T: minecraft_data_types::Decodable>(&self, handle: impl LazyHandle<T>) -> anyhow::Result<()>;
+                    fn handle_default<T: minecraft_data_types::Decodable>(&mut self, handle: impl LazyHandle<T>) -> anyhow::Result<()>;
                     $(
-                        fn [<handle_$enum_ident:snake>](&self, handle: impl LazyHandle<$packet_type>) -> anyhow::Result<()> {
+                        fn [<handle_$enum_ident:snake>](&mut self, handle: impl LazyHandle<$packet_type>) -> anyhow::Result<()> {
                             Self::handle_default(self, handle)
                         }
                     )*

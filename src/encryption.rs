@@ -8,7 +8,6 @@ use rand::rngs::OsRng;
 use rand::{Rng, RngCore};
 use rsa::pkcs1::{FromRsaPublicKey, ToRsaPublicKey};
 use rsa::{PaddingScheme, PublicKey, RsaPrivateKey, RsaPublicKey};
-use std::io::Write;
 
 pub type EncryptionStream = Cfb8<Aes128>;
 
