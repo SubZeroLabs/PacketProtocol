@@ -17,8 +17,8 @@ pub struct MinecraftPacketBuffer {
 impl MinecraftPacketBuffer {
     pub fn new() -> Self {
         MinecraftPacketBuffer {
-            bytes: BytesMut::with_capacity(2097151),
-            decoded: BytesMut::with_capacity(2097151),
+            bytes: BytesMut::with_capacity(2097151 + 3),
+            decoded: BytesMut::with_capacity(2097151 + 3),
             encryption: None,
         }
     }
