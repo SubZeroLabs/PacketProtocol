@@ -11,7 +11,7 @@ pub enum BufferState {
 pub struct MinecraftPacketBuffer {
     bytes: BytesMut,
     decoded: BytesMut,
-    encryption: Option<crate::encryption::Codec>,
+    decryption: Option<crate::encryption::Codec>,
 }
 
 impl MinecraftPacketBuffer {
@@ -19,7 +19,7 @@ impl MinecraftPacketBuffer {
         MinecraftPacketBuffer {
             bytes: BytesMut::with_capacity(2097151 + 3),
             decoded: BytesMut::with_capacity(2097151 + 3),
-            encryption: None,
+            decryption: None,
         }
     }
 
@@ -27,8 +27,8 @@ impl MinecraftPacketBuffer {
         (self.bytes.len(), self.decoded.len())
     }
 
-    pub fn enable_encryption(&mut self, encryption: crate::encryption::Codec) {
-        self.encryption = Some(encryption)
+    pub fn enable_decryption(&mut self, decryption: crate::encryption::Codec) {
+        self.decryption = Some(decryption)
     }
 
     pub fn inner_buf(&mut self) -> &mut BytesMut {
@@ -67,7 +67,7 @@ impl MinecraftPacketBuffer {
 
         let mut read_half = self.bytes.chunks_mut(size_read).next().unwrap();
 
-        if let Some(encryption) = &mut self.encryption {
+        if let Some(encryption) = &mut self.decryption {
             encryption.decrypt(&mut read_half);
         }
 
