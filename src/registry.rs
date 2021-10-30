@@ -34,10 +34,7 @@ where
         T::decode(&mut self.bytes)
     }
 
-    fn pass_bytes(mut self, writer: &mut impl Write) -> anyhow::Result<()> {
-        (&mut self.bytes)
-            .rewind()
-            .context("Failed to rewind bytes.")?;
+    fn pass_bytes(self, writer: &mut impl Write) -> anyhow::Result<()> {
         writer
             .write_all(&self.bytes.into_inner())
             .context("Failed to pass through bytes to writer.")

@@ -50,7 +50,7 @@ impl PacketAllocator for UncompressedPacket {
         let mut vec =
             vec![0; (*self.length as usize) - (cursor.position() as usize - length_size as usize)];
         reader.read_exact(&mut vec)?;
-        cursor.write_all(&mut vec)?;
+        cursor.write_all(&vec)?;
         cursor.seek(SeekFrom::Start(length_size + id_size))?;
         Ok((self.packet_id, cursor))
     }

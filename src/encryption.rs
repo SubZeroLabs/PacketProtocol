@@ -16,7 +16,7 @@ pub struct Codec {
 }
 
 impl Codec {
-    pub fn new(shared_secret_bytes: &Vec<u8>) -> anyhow::Result<Self> {
+    pub fn new(shared_secret_bytes: &[u8]) -> anyhow::Result<Self> {
         match EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes) {
             Ok(encryption_stream) => Ok(Codec { encryption_stream }),
             Err(_) => anyhow::bail!("Invalid length for encryption stream."),
@@ -26,7 +26,7 @@ impl Codec {
     pub fn from_response(
         private_key: &RsaPrivateKey,
         response: &EncryptionResponse,
-        verify: &Vec<u8>,
+        verify: &[u8],
     ) -> anyhow::Result<Self> {
         let decrypted_verify =
             private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &response.verify_token.1)?;
@@ -37,14 +37,14 @@ impl Codec {
 
         let decrypted_shared_secret =
             private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &response.shared_secret.1)?;
-        Ok(Codec::new(&decrypted_shared_secret)?)
+        Codec::new(&decrypted_shared_secret)
     }
 
-    pub fn encrypt(&mut self, bytes: &mut [u8]) -> () {
+    pub fn encrypt(&mut self, bytes: &mut [u8]) {
         self.encryption_stream.encrypt(bytes)
     }
 
-    pub fn decrypt(&mut self, bytes: &mut [u8]) -> () {
+    pub fn decrypt(&mut self, bytes: &mut [u8]) {
         self.encryption_stream.decrypt(bytes)
     }
 
