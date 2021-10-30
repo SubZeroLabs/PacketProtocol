@@ -8,7 +8,7 @@ where
     fn write_uncompressed(&self, writer: &mut impl Write) -> anyhow::Result<()>;
 }
 
-pub trait PacketAllocator {
+pub trait PacketAllocator: minecraft_data_types::Decodable {
     fn into_packet_cursor(
         self,
         reader: &mut impl Read,

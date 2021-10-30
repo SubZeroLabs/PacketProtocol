@@ -68,8 +68,8 @@ macro_rules! registry {
 
             paste! {
                 impl $registry_name {
-                    pub fn read_packet_uncompressed(handler: &mut impl [<$registry_name Handler>], reader: &mut impl std::io::Read) -> anyhow::Result<()> {
-                        let uncompressed_packet = $crate::packet::UncompressedPacket::decode(reader)?;
+                    pub fn read_packet<T: $crate::packet::PacketAllocator>(handler: &mut impl [<$registry_name Handler>], reader: &mut impl std::io::Read) -> anyhow::Result<()> {
+                        let uncompressed_packet = T::decode(reader)?;
                         let (packet_id, data_cursor) = uncompressed_packet.into_packet_cursor(reader)?;
                         let lazy_handler = SimpleLazyHandle::new(data_cursor);
                         match packet_id.into() {
