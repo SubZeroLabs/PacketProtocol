@@ -64,6 +64,10 @@ macro_rules! registry {
                     fn write_uncompressed(&self, writer: &mut impl Write) -> anyhow::Result<()> {
                         $crate::packet::Packet::write_packet(&minecraft_data_types::VarInt::from($packet_id), self, writer)
                     }
+
+                    fn to_resolved_packet(&self) -> anyhow::Result<$crate::packet::ResolvedPacket> {
+                        $crate::packet::ResolvedPacket::from_encodable(minecraft_data_types::VarInt::from($packet_id), self)
+                    }
                 }
             )*
 
