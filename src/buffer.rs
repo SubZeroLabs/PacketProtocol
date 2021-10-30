@@ -32,7 +32,6 @@ impl MinecraftPacketBuffer {
     }
 
     fn is_packet_available(&self) -> bool {
-        println!("Polled with available decoded: {:?}", self.decoded);
         let mut cursor: Cursor<&BytesMut> = Cursor::new(&self.decoded);
 
         if let Ok(length) = VarInt::decode(&mut cursor) {
@@ -43,8 +42,6 @@ impl MinecraftPacketBuffer {
     }
 
     pub fn poll(&mut self) -> BufferState {
-        println!("Incoming bytes from poll: {:?}", &self.bytes);
-
         let size_read = self
             .bytes
             .len()
@@ -65,7 +62,6 @@ impl MinecraftPacketBuffer {
         let mut read_half = self.bytes.chunks_mut(size_read).next().unwrap();
 
         if let Some(encryption) = &mut self.encryption {
-            println!("Decrypting incoming read");
             encryption.decrypt(&mut read_half);
         }
 
