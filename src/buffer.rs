@@ -59,6 +59,8 @@ impl MinecraftPacketBuffer {
             };
         }
 
+        log::debug!("Polling {} with {} in decoded.", size_read, self.decoded.len());
+
         let mut read_half = self.bytes.chunks_mut(size_read).next().unwrap();
 
         if let Some(encryption) = &mut self.encryption {
