@@ -1,3 +1,5 @@
+#![feature(seek_stream_len)]
+
 use crate::packet::PacketAllocator;
 use anyhow::Context;
 use minecraft_data_types::{auto_enum, packets::*, Decodable};
