@@ -68,7 +68,7 @@ impl MinecraftPacketBuffer {
             };
         }
 
-        log::debug!("Polling {} with {} in decoded.", size_read, self.decoded.len());
+        log::trace!("Polling {} with {} in decoded.", size_read, self.decoded.len());
 
         let read_half = self.bytes.chunks_mut(size_read).next().unwrap();
 
