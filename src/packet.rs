@@ -3,6 +3,7 @@ use std::io::{Write, Read};
 use flate2::bufread::ZlibEncoder;
 use flate2::Compression;
 use tokio::net::tcp::OwnedWriteHalf;
+use std::fmt::{Debug, Formatter};
 
 pub trait WritablePacket
     where
@@ -18,6 +19,12 @@ pub struct ResolvedPacket {
     packet_id: VarInt,
     uncompressed_length: VarInt,
     packet: Vec<u8>,
+}
+
+impl Debug for ResolvedPacket {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.packet_id)
+    }
 }
 
 impl ResolvedPacket {
