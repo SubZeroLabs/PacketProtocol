@@ -1,10 +1,8 @@
-#![feature(seek_stream_len)]
-
 use crate::packet::PacketAllocator;
 use anyhow::Context;
 use minecraft_data_types::{auto_enum, packets::*, Decodable};
 use paste::paste;
-use std::io::{Seek, Write, BufRead};
+use std::io::{Seek, Write};
 use async_trait::async_trait;
 
 pub trait LazyHandle<T>
@@ -46,7 +44,10 @@ where
     }
 
     fn consume_bytes(mut self) -> anyhow::Result<()> {
-        self.bytes.set_position(self.bytes.stream_len()?);
+        let length = {
+            self.bytes.stream_len()?
+        };
+        self.bytes.set_position(length);
         Ok(())
     }
 }
