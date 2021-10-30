@@ -3,6 +3,7 @@ use anyhow::Context;
 use minecraft_data_types::{auto_enum, packets::*, Decodable};
 use paste::paste;
 use std::io::{Seek, Write};
+use async_trait::async_trait;
 
 pub trait LazyHandle<T>
 where
@@ -68,14 +69,14 @@ macro_rules! registry {
 
             paste! {
                 impl $registry_name {
-                    pub fn read_packet<T: $crate::packet::PacketAllocator, H: [<$registry_name Handler>], R: std::io::Read>(handler: &mut H, reader: &mut R) -> anyhow::Result<()> {
+                    pub async fn read_packet<T: $crate::packet::PacketAllocator, H: [<$registry_name Handler>] + std::marker::Send, R: std::io::Read>(handler: &mut H, reader: &mut R) -> anyhow::Result<()> {
                         let uncompressed_packet = T::decode(reader)?;
                         let (packet_id, data_cursor) = uncompressed_packet.into_packet_cursor(reader)?;
                         let lazy_handler = SimpleLazyHandle::new(data_cursor);
                         match packet_id.into() {
                             $(
                                 $packet_id => {
-                                    [<$registry_name Handler>]::[<handle_$enum_ident:snake>](handler, lazy_handler)
+                                    [<$registry_name Handler>]::[<handle_$enum_ident:snake>](handler, lazy_handler).await
                                 }
                             )*
                             _ => {
@@ -84,11 +85,12 @@ macro_rules! registry {
                         }
                     }
                 }
+                #[async_trait]
                 pub trait [<$registry_name Handler>] {
-                    fn handle_default<T: minecraft_data_types::Decodable>(&mut self, handle: impl LazyHandle<T>) -> anyhow::Result<()>;
+                    async fn handle_default<T: minecraft_data_types::Decodable>(&mut self, handle: impl LazyHandle<T> + std::marker::Send + 'async_trait) -> anyhow::Result<()>;
                     $(
-                        fn [<handle_$enum_ident:snake>](&mut self, handle: impl LazyHandle<$packet_type>) -> anyhow::Result<()> {
-                            Self::handle_default(self, handle)
+                        async fn [<handle_$enum_ident:snake>](&mut self, handle: impl LazyHandle<$packet_type> + std::marker::Send + 'async_trait) -> anyhow::Result<()> {
+                            Self::handle_default(self, handle).await
                         }
                     )*
                 }
