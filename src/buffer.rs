@@ -23,6 +23,10 @@ impl MinecraftPacketBuffer {
         }
     }
 
+    pub fn len(&self) -> (usize, usize) {
+        (self.bytes.len(), self.decoded.len())
+    }
+
     pub fn enable_encryption(&mut self, encryption: crate::encryption::Codec) {
         self.encryption = Some(encryption)
     }
