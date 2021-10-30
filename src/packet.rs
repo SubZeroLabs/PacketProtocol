@@ -1,7 +1,8 @@
-use minecraft_data_types::{Encodable, VarInt};
+use minecraft_data_types::{Encodable, VarInt, AsyncEncodable};
 use std::io::{Write, Read};
 use flate2::bufread::ZlibEncoder;
 use flate2::Compression;
+use tokio::net::tcp::OwnedWriteHalf;
 
 pub trait WritablePacket
     where
@@ -33,7 +34,7 @@ impl ResolvedPacket {
         let sized = encodable.size()?;
         let mut packet: Vec<u8> = Vec::with_capacity(sized.into());
         encodable.encode(&mut packet)?;
-        ResolvedPacket::new(minecraft_data_types::VarInt::from(packet_id), packet)
+        ResolvedPacket::new(packet_id, packet)
     }
 
     pub fn encode(&mut self, codec: &mut super::encryption::Codec) {
@@ -57,7 +58,7 @@ impl ResolvedPacket {
             self.compression_data = Some((VarInt::from(compressed.len()) + self.uncompressed_length.size()?, self.uncompressed_length));
             self.packet = compressed;
         } else {
-            self.compression_data = Some((self.uncompressed_length.clone() + VarInt::from(1), VarInt::from(0))); // 0-VarInt.size() is always 1 byte
+            self.compression_data = Some((self.uncompressed_length + VarInt::from(1), VarInt::from(0))); // 0-VarInt.size() is always 1 byte
         }
         Ok(())
     }
@@ -72,6 +73,21 @@ impl ResolvedPacket {
             self.uncompressed_length.encode(writer)?;
             self.packet_id.encode(writer)?;
             writer.write_all(&self.packet)?;
+            Ok(())
+        }
+    }
+
+    pub async fn write_async(&self, writer: &mut OwnedWriteHalf) -> anyhow::Result<()> {
+        use tokio::io::AsyncWriteExt;
+        if let Some((packet_length, data_length)) = self.compression_data {
+            packet_length.async_encode(writer).await?;
+            data_length.async_encode(writer).await?;
+            writer.write_all(&self.packet).await?; // the packet will include the ID if compressed
+            Ok(())
+        } else {
+            self.uncompressed_length.async_encode(writer).await?;
+            self.packet_id.async_encode(writer).await?;
+            writer.write_all(&self.packet).await?;
             Ok(())
         }
     }
