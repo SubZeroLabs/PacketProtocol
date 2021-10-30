@@ -1,4 +1,3 @@
-use crate::packet::PacketAllocator;
 use anyhow::Context;
 use minecraft_data_types::{auto_enum, packets::*, Decodable};
 use paste::paste;
@@ -63,17 +62,16 @@ macro_rules! registry {
             $(
                 impl $crate::packet::WritablePacket for $packet_type {
                     fn write_uncompressed(&self, writer: &mut impl Write) -> anyhow::Result<()> {
-                        $crate::packet::UncompressedPacket::write_packet(&minecraft_data_types::VarInt::from($packet_id), self, writer)
+                        $crate::packet::Packet::write_packet(&minecraft_data_types::VarInt::from($packet_id), self, writer)
                     }
                 }
             )*
 
             paste! {
                 impl $registry_name {
-                    pub async fn read_packet<T: $crate::packet::PacketAllocator, H: [<$registry_name Handler>] + std::marker::Send, R: std::io::Read>(handler: &mut H, reader: &mut R) -> anyhow::Result<()> {
-                        let uncompressed_packet = T::decode(reader)?;
-                        let (packet_id, data_cursor) = uncompressed_packet.into_packet_cursor(reader)?;
-                        let lazy_handler = SimpleLazyHandle::new(data_cursor);
+                    pub async fn read_packet<H: [<$registry_name Handler>] + std::marker::Send>(handler: &mut H, mut reader: std::io::Cursor<Vec<u8>>) -> anyhow::Result<()> {
+                        let packet_id = minecraft_data_types::VarInt::decode(&mut reader)?;
+                        let lazy_handler = SimpleLazyHandle::new(reader);
                         match packet_id.into() {
                             $(
                                 $packet_id => {
