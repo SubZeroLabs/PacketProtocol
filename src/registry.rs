@@ -90,9 +90,9 @@ macro_rules! registry {
                 }
                 #[async_trait]
                 pub trait [<$registry_name Handler>] {
-                    async fn handle_default<T: minecraft_data_types::Decodable>(&mut self, handle: impl LazyHandle<T> + std::marker::Send + 'async_trait) -> anyhow::Result<()>;
+                    async fn handle_default<T: minecraft_data_types::Decodable, H: LazyHandle<T> + Send>(&mut self, handle: H) -> anyhow::Result<()>;
                     $(
-                        async fn [<handle_$enum_ident:snake>](&mut self, handle: impl LazyHandle<$packet_type> + std::marker::Send + 'async_trait) -> anyhow::Result<()> {
+                        async fn [<handle_$enum_ident:snake>]<H: LazyHandle<$packet_type> + Send>(&mut self, handle: H) -> anyhow::Result<()> {
                             Self::handle_default(self, handle).await
                         }
                     )*
