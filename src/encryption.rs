@@ -54,12 +54,7 @@ impl Codec {
         let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
         let public_key = RsaPublicKey::from(&private_key);
 
-        let server_id = String::from_utf8(
-            rand::thread_rng()
-                .sample_iter(&rand::distributions::Alphanumeric)
-                .take(20)
-                .collect::<Vec<u8>>(),
-        )?;
+        let server_id = "";
 
         let mut verify_token: Vec<u8> = vec![0; 4];
         rng.fill_bytes(&mut verify_token);
