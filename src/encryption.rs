@@ -7,7 +7,7 @@ use minecraft_data_types::VarInt;
 use rand::rngs::OsRng;
 use rand::{Rng, RngCore};
 use rsa::pkcs1::{FromRsaPublicKey, ToRsaPublicKey};
-use rsa::{PaddingScheme, PublicKey, RsaPrivateKey, RsaPublicKey};
+use rsa::{PaddingScheme, PublicKey, RsaPrivateKey, RsaPublicKey, PublicKeyParts};
 
 pub type EncryptionStream = Cfb8<Aes128>;
 
@@ -59,7 +59,7 @@ impl Codec {
         let mut verify_token: Vec<u8> = vec![0; 4];
         rng.fill_bytes(&mut verify_token);
 
-        let pem = Vec::from(public_key.to_pkcs1_der()?.as_ref());
+        let pem = rsa_der::public_key_to_der(&public_key.n().to_bytes_be(), &public_key.e().to_bytes_be());
 
         Ok((
             private_key,
