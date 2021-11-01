@@ -48,7 +48,7 @@ impl Codec {
         self.encryption_stream.decrypt(bytes)
     }
 
-    pub fn client_bound_encryption_request() -> anyhow::Result<(RsaPrivateKey, EncryptionRequest)> {
+    pub fn client_bound_encryption_request() -> anyhow::Result<(RsaPrivateKey, RsaPublicKey, EncryptionRequest)> {
         let mut rng = OsRng;
         let bits = 1024;
         let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
@@ -63,6 +63,7 @@ impl Codec {
 
         Ok((
             private_key,
+            public_key,
             EncryptionRequest {
                 server_id: EncryptionRequestServerId::from(server_id),
                 public_key: (VarInt::from(pem.len()), pem),
