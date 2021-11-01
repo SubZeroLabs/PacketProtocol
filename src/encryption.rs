@@ -59,7 +59,7 @@ impl Codec {
         let mut verify_token: Vec<u8> = vec![0; 4];
         rng.fill_bytes(&mut verify_token);
 
-        let pem = Vec::from(public_key.to_pkcs1_der()?.as_der());
+        let pem = Vec::from(public_key.to_pkcs1_der()?.as_ref());
 
         Ok((
             private_key,
