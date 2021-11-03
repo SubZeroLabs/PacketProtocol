@@ -16,7 +16,7 @@ aes = "0.7.5"
 async-trait = "0.1.51"
 log = "0.4"
 flate2 = "1.0"
-tokio = { version = "1", features = ["io-util"] }
+tokio = { version = "1", features = ["io-util", "time", "sync"] }
 uuid = "0.8.2"
 
 [features]
