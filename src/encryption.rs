@@ -1,13 +1,7 @@
 use aes::Aes128;
 use cfb8::cipher::{AsyncStreamCipher, NewCipher};
 use cfb8::Cfb8;
-use minecraft_data_types::packets::login::client::{EncryptionRequest, EncryptionRequestServerId};
-use minecraft_data_types::packets::login::server::EncryptionResponse;
-use minecraft_data_types::VarInt;
-use rand::rngs::OsRng;
-use rand::{Rng, RngCore};
-use rsa::pkcs1::{FromRsaPublicKey, ToRsaPublicKey};
-use rsa::{PaddingScheme, PublicKey, RsaPrivateKey, RsaPublicKey, PublicKeyParts};
+use rsa::{PaddingScheme, RsaPrivateKey};
 
 pub type EncryptionStream = Cfb8<Aes128>;
 
@@ -16,27 +10,42 @@ pub struct Codec {
 }
 
 impl Codec {
-    pub fn new(shared_secret_bytes: &[u8]) -> anyhow::Result<Self> {
-        match EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes) {
-            Ok(encryption_stream) => Ok(Codec { encryption_stream }),
-            Err(_) => anyhow::bail!("Invalid length for encryption stream."),
+    pub fn new(shared_secret_bytes: &[u8]) -> anyhow::Result<(Self, Self)> {
+        let (stream_read, stream_write) = (
+            EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes),
+            EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes)
+        );
+        match (stream_read, stream_write) {
+            (Ok(stream_read), Ok(stream_write)) => {
+                Ok((Codec { encryption_stream: stream_read }, Codec { encryption_stream: stream_write }))
+            }
+            (Err(error), Ok(_)) => {
+                anyhow::bail!("Failed to create read stream {}.", error);
+            }
+            (Ok(_), Err(error)) => {
+                anyhow::bail!("Failed to create write stream {}.", error);
+            }
+            (Err(error), Err(error2)) => {
+                anyhow::bail!("Failed to create both streams {}, {}.", error, error2);
+            }
         }
     }
 
     pub fn from_response(
         private_key: &RsaPrivateKey,
-        response: &EncryptionResponse,
+        response_verify: &[u8],
+        response_shared_secret: &[u8],
         verify: &[u8],
-    ) -> anyhow::Result<Self> {
+    ) -> anyhow::Result<(Self, Self)> {
         let decrypted_verify =
-            private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &response.verify_token.1)?;
+            private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, response_verify)?;
 
         if verify.ne(&decrypted_verify) {
             anyhow::bail!("Failed to assert verify token match.");
         }
 
         let decrypted_shared_secret =
-            private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, &response.shared_secret.1)?;
+            private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, response_shared_secret)?;
         Codec::new(&decrypted_shared_secret)
     }
 
@@ -46,60 +55,5 @@ impl Codec {
 
     pub fn decrypt(&mut self, bytes: &mut [u8]) {
         self.encryption_stream.decrypt(bytes)
-    }
-
-    pub fn client_bound_encryption_request() -> anyhow::Result<(RsaPrivateKey, RsaPublicKey, EncryptionRequest)> {
-        let mut rng = OsRng;
-        let bits = 1024;
-        let private_key = RsaPrivateKey::new(&mut rng, bits).expect("failed to generate a key");
-        let public_key = RsaPublicKey::from(&private_key);
-
-        let server_id = "";
-
-        let mut verify_token: Vec<u8> = vec![0; 4];
-        rng.fill_bytes(&mut verify_token);
-
-        let pem = rsa_der::public_key_to_der(&public_key.n().to_bytes_be(), &public_key.e().to_bytes_be());
-
-        Ok((
-            private_key,
-            public_key,
-            EncryptionRequest {
-                server_id: EncryptionRequestServerId::from(server_id),
-                public_key: (VarInt::from(pem.len()), pem),
-                verify_token: (VarInt::from(4), verify_token),
-            },
-        ))
-    }
-
-    pub fn server_bound_encryption_response(
-        public_key: Vec<u8>,
-        verify_token: Vec<u8>,
-    ) -> anyhow::Result<(Vec<u8>, EncryptionResponse)> {
-        let public_key = RsaPublicKey::from_pkcs1_der(&public_key)?;
-
-        let mut rng = OsRng;
-
-        let encrypted_verify_token =
-            public_key.encrypt(&mut rng, PaddingScheme::PKCS1v15Encrypt, &verify_token)?;
-
-        let mut shared_secret = vec![0; 16];
-        rng.fill_bytes(&mut shared_secret);
-        let encrypted_shared_secret =
-            public_key.encrypt(&mut rng, PaddingScheme::PKCS1v15Encrypt, &shared_secret)?;
-
-        Ok((
-            shared_secret,
-            EncryptionResponse {
-                shared_secret: (
-                    VarInt::from(encrypted_shared_secret.len()),
-                    encrypted_shared_secret,
-                ),
-                verify_token: (
-                    VarInt::from(encrypted_verify_token.len()),
-                    encrypted_verify_token,
-                ),
-            },
-        ))
     }
 }

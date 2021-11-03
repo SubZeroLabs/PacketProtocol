@@ -1,7 +1,8 @@
 use bytes::{Buf, BufMut, BytesMut};
-use minecraft_data_types::VarInt;
-use std::io::{Cursor, Read};
 use flate2::bufread::ZlibDecoder;
+use minecraft_data_types::nums::VarInt;
+use std::convert::TryInto;
+use std::io::{Cursor, Read};
 
 pub enum BufferState {
     Waiting,
@@ -30,8 +31,8 @@ impl MinecraftPacketBuffer {
         (self.bytes.len(), self.decoded.len())
     }
 
-    pub fn enable_decryption(&mut self, decryption: crate::encryption::Codec) {
-        self.decryption = Some(decryption)
+    pub fn enable_decryption(&mut self, codec: crate::encryption::Codec) {
+        self.decryption = Some(codec);
     }
 
     pub fn enable_decompression(&mut self) {
@@ -62,18 +63,24 @@ impl MinecraftPacketBuffer {
             return if self.is_packet_available() {
                 BufferState::PacketReady
             } else if self.decoded.capacity() == self.decoded.len() {
-                BufferState::Error(String::from("Next packet was too big to decode, something went wrong."))
+                BufferState::Error(String::from(
+                    "Next packet was too big to decode, something went wrong.",
+                ))
             } else {
                 BufferState::Waiting
             };
         }
 
-        log::trace!("Polling {} with {} in decoded.", size_read, self.decoded.len());
+        log::trace!(
+            "Polling {} with {} in decoded.",
+            size_read,
+            self.decoded.len()
+        );
 
         let read_half = self.bytes.chunks_mut(size_read).next().unwrap();
 
-        if let Some(encryption) = &mut self.decryption {
-            encryption.decrypt(read_half);
+        if let Some(codec) = &mut self.decryption {
+            codec.decrypt(read_half);
         }
 
         self.decoded.put_slice(read_half);
@@ -90,23 +97,30 @@ impl MinecraftPacketBuffer {
     pub fn packet_reader(&mut self) -> anyhow::Result<Cursor<Vec<u8>>> {
         let mut cursor = Cursor::new(self.decoded.chunk());
         let (length_size, length) = VarInt::decode_and_size(&mut cursor)?;
-        self.decoded.advance(length_size.into());
-        let mut cursor: Cursor<Vec<u8>> = Cursor::new(self.decoded.chunks(length.into()).next().unwrap().to_vec());
+        self.decoded.advance(length_size.try_into()?);
+        let mut cursor: Cursor<Vec<u8>> = Cursor::new(
+            self.decoded
+                .chunks(length.try_into()?)
+                .next()
+                .unwrap()
+                .to_vec(),
+        );
 
         let cursor = if self.decompressing {
-            let (decompressed_length_size, decompressed_length) = VarInt::decode_and_size(&mut cursor)?;
-            let remaining_bytes = &cursor.into_inner()[decompressed_length_size.into()..];
+            let (decompressed_length_size, decompressed_length) =
+                VarInt::decode_and_size(&mut cursor)?;
+            let remaining_bytes = &cursor.into_inner()[decompressed_length_size.try_into()?..];
             if decompressed_length == 0 {
                 Cursor::new(Vec::from(remaining_bytes))
             } else {
-                let mut target = Vec::with_capacity(decompressed_length.into());
+                let mut target = Vec::with_capacity(decompressed_length.try_into()?);
                 ZlibDecoder::new(remaining_bytes).read_to_end(&mut target)?;
                 Cursor::new(target)
             }
         } else {
             cursor
         };
-        self.decoded.advance(length.into());
+        self.decoded.advance(length.try_into()?);
         Ok(cursor)
     }
 }
