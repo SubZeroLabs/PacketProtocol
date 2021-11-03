@@ -45,11 +45,10 @@ impl<T: MapDecodable> LazyHandle<T> for SimpleLazyHandle {
 
 #[async_trait::async_trait]
 pub trait RegistryBase<H: Send + Sync> {
-    async fn handle_packet<W: tokio::io::AsyncWrite + Send + Unpin>(
+    async fn handle_packet(
         handler: &mut H,
         mut packet_cursor: std::io::Cursor<Vec<u8>>,
         target_protocol: MCProtocol,
-        packet_writer: &mut W,
     ) -> anyhow::Result<()>;
 }
 
@@ -321,21 +320,20 @@ macro_rules! create_registry {
 
         #[async_trait::async_trait]
         impl<H: RegistryHandler> $crate::registry::RegistryBase<H> for Registry {
-            async fn handle_packet<W: tokio::io::AsyncWrite + Send + Unpin>(
+            async fn handle_packet(
                 handler: &mut H, mut packet_cursor: std::io::Cursor<Vec<u8>>,
-                target_protocol: $crate::protocol_version::MCProtocol,
-                packet_writer: &mut W
+                target_protocol: $crate::protocol_version::MCProtocol
             ) -> anyhow::Result<()> {
                 let packet_id = minecraft_data_types::nums::VarInt::decode(&mut packet_cursor)?;
                 paste::paste! {
                     match (target_protocol, *packet_id) {
                         $(
                             ($($protocol)* $(| $($protocol_ext)*)*, $packet_id) => {
-                                handler.[<handle_$packet_name:snake>]($crate::registry::SimpleLazyHandle::new(packet_cursor, target_protocol), packet_writer).await
+                                handler.[<handle_$packet_name:snake>]($crate::registry::SimpleLazyHandle::new(packet_cursor, target_protocol)).await
                             }
                             $($(
                                 ($($extra_protocol)* $(| $($extra_protocol_ext)*)*, $proto_packet_id) => {
-                                    handler.[<handle_$packet_name:snake>]($crate::registry::SimpleLazyHandle::new(packet_cursor, target_protocol), packet_writer).await
+                                    handler.[<handle_$packet_name:snake>]($crate::registry::SimpleLazyHandle::new(packet_cursor, target_protocol)).await
                                 }
                             )*)*
                         )*
@@ -349,17 +347,15 @@ macro_rules! create_registry {
         paste::paste! {
             #[async_trait::async_trait]
             pub trait RegistryHandler: Send + Sync {
-                async fn handle_default<T: crate::protocol_version::MapDecodable, H: $crate::registry::LazyHandle<T> + Send, W: tokio::io::AsyncWrite + Send + Unpin>(
-                    &mut self, handle: H,
-                    packet_writer: &mut W
+                async fn handle_default<T: crate::protocol_version::MapDecodable, H: $crate::registry::LazyHandle<T> + Send>(
+                    &mut self, handle: H
                 ) -> anyhow::Result<()>;
                 $(
-                    async fn [<handle_$packet_name:snake>]<H: $crate::registry::LazyHandle<$packet_name> + Send, W: tokio::io::AsyncWrite + Send + Unpin>(
+                    async fn [<handle_$packet_name:snake>]<H: $crate::registry::LazyHandle<$packet_name> + Send>(
                         &mut self,
-                        handle: H,
-                        packet_writer: &mut W
+                        handle: H
                     ) -> anyhow::Result<()> {
-                        Self::handle_default(self, handle, packet_writer).await
+                        Self::handle_default(self, handle).await
                     }
                 )*
             }
