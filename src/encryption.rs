@@ -38,7 +38,7 @@ impl Codec {
         if verify.ne(response_verify) {
             anyhow::bail!("Failed to assert verify token match.");
         }
-        Codec::new(&shared_secret)
+        Codec::new(shared_secret)
     }
 
     pub fn encrypt(&mut self, bytes: &mut [u8]) {

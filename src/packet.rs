@@ -58,16 +58,14 @@ impl ResolvedPacket {
     }
 
     pub fn compress(&mut self, compression_threshold: i32) -> anyhow::Result<()> {
+        let mut new_packet = Vec::with_capacity(usize::try_from(self.uncompressed_length)?);
+        self.packet_id.encode(&mut new_packet)?;
+        new_packet.append(&mut self.packet);
+
         if self.uncompressed_length > compression_threshold {
-            let packet_id_size = self.packet_id.size()?;
+            log::debug!("Compressing packet of length {} for threshold {}", self.uncompressed_length, compression_threshold);
 
-            let mut uncompressed_packet: Vec<u8> =
-                Vec::with_capacity(usize::try_from(packet_id_size)? + self.packet.len());
-            self.packet_id.encode(&mut uncompressed_packet)?;
-            uncompressed_packet.append(&mut self.packet);
-
-            let slice: &[u8] = &uncompressed_packet;
-            let mut encoder = ZlibEncoder::new(slice, Compression::default());
+            let mut encoder = ZlibEncoder::new(new_packet.as_slice(), Compression::default());
 
             let mut compressed = Vec::new();
             encoder.read_to_end(&mut compressed)?;
@@ -78,9 +76,9 @@ impl ResolvedPacket {
             ));
             self.packet = compressed;
         } else {
-            self.compression_data =
-                Some((self.uncompressed_length + VarInt::from(1), VarInt::from(0)));
-            // 0-VarInt.size() is always 1 byte
+            log::debug!("Not compressing packet of length {} for threshold {}", self.uncompressed_length, compression_threshold);
+            self.compression_data = Some((self.uncompressed_length, VarInt::from(0)));
+            self.packet = new_packet;
         }
         Ok(())
     }
