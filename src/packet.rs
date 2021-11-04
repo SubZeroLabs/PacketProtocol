@@ -1,17 +1,17 @@
+use crate::buffer::BufferState;
 use crate::protocol_version::{MCProtocol, MapEncodable};
 use anyhow::Context;
 use flate2::bufread::ZlibEncoder;
 use flate2::Compression;
 use minecraft_data_types::{encoder::*, nums::VarInt};
 use std::convert::{TryFrom, TryInto};
-use std::fmt::{Debug, Formatter, Display};
+use std::fmt::{Debug, Display, Formatter};
 use std::io::Read;
-use tokio::io::{AsyncWriteExt, AsyncReadExt};
-use crate::buffer::BufferState;
-use tokio::time::{timeout_at, Instant, Duration};
-use std::sync::Arc;
 use std::net::SocketAddr;
+use std::sync::Arc;
+use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, MutexGuard};
+use tokio::time::{timeout_at, Duration, Instant};
 
 pub trait WritablePacket: MapEncodable {
     fn to_resolved_packet(&self, protocol: MCProtocol) -> anyhow::Result<ResolvedPacket>;
@@ -63,7 +63,11 @@ impl ResolvedPacket {
         new_packet.append(&mut self.packet);
 
         if self.uncompressed_length > compression_threshold {
-            log::trace!("Compressing packet of length {} for threshold {}", self.uncompressed_length, compression_threshold);
+            log::trace!(
+                "Compressing packet of length {} for threshold {}",
+                self.uncompressed_length,
+                compression_threshold
+            );
 
             let mut encoder = ZlibEncoder::new(new_packet.as_slice(), Compression::default());
 
@@ -76,7 +80,11 @@ impl ResolvedPacket {
             ));
             self.packet = compressed;
         } else {
-            log::trace!("Not compressing packet of length {} for threshold {}", self.uncompressed_length, compression_threshold);
+            log::trace!(
+                "Not compressing packet of length {} for threshold {}",
+                self.uncompressed_length,
+                compression_threshold
+            );
             self.compression_data = Some((self.uncompressed_length + 1, VarInt::from(0)));
             self.packet = new_packet;
         }
@@ -85,7 +93,12 @@ impl ResolvedPacket {
 
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         if let Some((packet_length, data_length)) = self.compression_data {
-            log::trace!("Compression Encoding ({}, {}) for {}", packet_length, data_length, self.packet.len());
+            log::trace!(
+                "Compression Encoding ({}, {}) for {}",
+                packet_length,
+                data_length,
+                self.packet.len()
+            );
             packet_length.encode(writer)?;
             data_length.encode(writer)?;
             writer.write_all(&self.packet)?; // the packet will include the ID if compressed
@@ -103,7 +116,12 @@ impl ResolvedPacket {
         writer: &mut W,
     ) -> anyhow::Result<()> {
         if let Some((packet_length, data_length)) = self.compression_data {
-            log::trace!("Compression Encoding ({}, {}) for {}", packet_length, data_length, self.packet.len());
+            log::trace!(
+                "Compression Encoding ({}, {}) for {}",
+                packet_length,
+                data_length,
+                self.packet.len()
+            );
             packet_length.async_encode(writer).await?;
             data_length.async_encode(writer).await?;
             writer.write_all(&self.packet).await?; // the packet will include the ID if compressed
@@ -137,7 +155,11 @@ pub struct PacketWriter<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> 
 
 impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
     pub fn new(internal_writer: T) -> Self {
-        PacketWriter { internal_writer, codec: None, compression_threshold: None }
+        PacketWriter {
+            internal_writer,
+            codec: None,
+            compression_threshold: None,
+        }
     }
 
     pub fn enable_encryption(&mut self, codec: crate::encryption::Codec) {
@@ -148,7 +170,10 @@ impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
         self.compression_threshold = Some(compression_threshold);
     }
 
-    pub async fn send_resolved_packet(&mut self, packet: &mut ResolvedPacket) -> anyhow::Result<()> {
+    pub async fn send_resolved_packet(
+        &mut self,
+        packet: &mut ResolvedPacket,
+    ) -> anyhow::Result<()> {
         if let Some(compression) = self.compression_threshold {
             packet.compress(compression)?;
         }
@@ -156,9 +181,15 @@ impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
             let mut buf = Vec::with_capacity(packet.size()?);
             packet.write_async(&mut buf).await?;
             codec.encrypt(&mut buf);
-            self.internal_writer.write_all(&buf).await.context("Failed to write encoded packet.")
+            self.internal_writer
+                .write_all(&buf)
+                .await
+                .context("Failed to write encoded packet.")
         } else {
-            packet.write_async(&mut self.internal_writer).await.context("Failed to write non-encoded packet.")
+            packet
+                .write_async(&mut self.internal_writer)
+                .await
+                .context("Failed to write non-encoded packet.")
         }
     }
 }
@@ -171,7 +202,11 @@ pub struct PacketReader<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> {
 
 impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
     pub fn new(internal_reader: T, address: Arc<SocketAddr>) -> Self {
-        PacketReader { internal_reader, buffer: crate::buffer::MinecraftPacketBuffer::new(), address }
+        PacketReader {
+            internal_reader,
+            buffer: crate::buffer::MinecraftPacketBuffer::new(),
+            address,
+        }
     }
 
     pub fn enable_decryption(&mut self, codec: crate::encryption::Codec) {
@@ -201,7 +236,9 @@ impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
                 }
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
-                    if let Err(err) = timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await {
+                    if let Err(err) =
+                        timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                    {
                         let len = { self.buffer.len() };
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
                         anyhow::bail!("Error occurred reading buffer: {:?}", err);
@@ -217,14 +254,27 @@ impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
     }
 }
 
-pub struct PacketReadWriteLocker<R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin, W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> {
+pub struct PacketReadWriteLocker<
+    R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin,
+    W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin,
+> {
     packet_writer: Arc<Mutex<PacketWriter<W>>>,
     packet_reader: Arc<Mutex<PacketReader<R>>>,
 }
 
-impl<R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin, W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketReadWriteLocker<R, W> {
-    pub fn new(packet_writer: Arc<Mutex<PacketWriter<W>>>, packet_reader: Arc<Mutex<PacketReader<R>>>) -> Self {
-        Self { packet_writer, packet_reader }
+impl<
+        R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin,
+        W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin,
+    > PacketReadWriteLocker<R, W>
+{
+    pub fn new(
+        packet_writer: Arc<Mutex<PacketWriter<W>>>,
+        packet_reader: Arc<Mutex<PacketReader<R>>>,
+    ) -> Self {
+        Self {
+            packet_writer,
+            packet_reader,
+        }
     }
 
     pub async fn lock_reader(&self) -> MutexGuard<'_, PacketReader<R>> {

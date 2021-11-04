@@ -1,6 +1,6 @@
 use std::fmt::{Display, Formatter, Write};
 macro_rules! protocol {
-    ($($protocol_identifier:ident => $protocol_version:literal as $string_name:literal,)*) => {
+    ($($string_name:literal => $protocol_version:literal as $protocol_identifier:ident,)*) => {
         #[derive(Copy, Clone)]
         pub enum MCProtocol {
             $(
@@ -53,8 +53,8 @@ macro_rules! protocol {
 }
 
 protocol! {
-    Undefined => 0 as "Unknown",
-    V1_17_1 => 756 as "1.17.1",
+    "Undefined" => 0 as Undefined,
+    "1.17.1" => 756 as V1_17_1,
 }
 
 pub trait MapDecodable: Sized {

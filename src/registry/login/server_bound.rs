@@ -1,9 +1,9 @@
 use crate::create_registry;
 use minecraft_data_types::nums::VarInt;
-use rsa::{RsaPublicKey, PaddingScheme, PublicKey};
 use rand::rngs::OsRng;
-use rsa::pkcs1::FromRsaPublicKey;
 use rand::RngCore;
+use rsa::pkcs1::FromRsaPublicKey;
+use rsa::{PaddingScheme, PublicKey, RsaPublicKey};
 use std::convert::TryFrom;
 
 pub type SharedSecret = (VarInt, Vec<u8>);
@@ -29,10 +29,7 @@ create_registry! {
 }
 
 impl EncryptionResponse {
-    pub fn new(
-        public_key: &[u8],
-        verify_token: &[u8],
-    ) -> anyhow::Result<(Vec<u8>, Self)> {
+    pub fn new(public_key: &[u8], verify_token: &[u8]) -> anyhow::Result<(Vec<u8>, Self)> {
         let public_key = RsaPublicKey::from_pkcs1_der(&public_key)?;
 
         let mut rng = OsRng;

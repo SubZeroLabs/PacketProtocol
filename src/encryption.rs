@@ -12,12 +12,17 @@ impl Codec {
     pub fn new(shared_secret_bytes: &[u8]) -> anyhow::Result<(Self, Self)> {
         let (stream_read, stream_write) = (
             EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes),
-            EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes)
+            EncryptionStream::new_from_slices(shared_secret_bytes, shared_secret_bytes),
         );
         match (stream_read, stream_write) {
-            (Ok(stream_read), Ok(stream_write)) => {
-                Ok((Codec { encryption_stream: stream_read }, Codec { encryption_stream: stream_write }))
-            }
+            (Ok(stream_read), Ok(stream_write)) => Ok((
+                Codec {
+                    encryption_stream: stream_read,
+                },
+                Codec {
+                    encryption_stream: stream_write,
+                },
+            )),
             (Err(error), Ok(_)) => {
                 anyhow::bail!("Failed to create read stream {}.", error);
             }

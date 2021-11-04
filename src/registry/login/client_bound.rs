@@ -1,10 +1,10 @@
-use minecraft_data_types::auto_string;
 use crate::create_registry;
-use minecraft_data_types::nums::VarInt;
+use minecraft_data_types::auto_string;
 use minecraft_data_types::common::{Chat, Identifier};
+use minecraft_data_types::nums::VarInt;
 use rand::rngs::OsRng;
-use rsa::{RsaPrivateKey, RsaPublicKey, PublicKeyParts};
 use rand::RngCore;
+use rsa::{PublicKeyParts, RsaPrivateKey, RsaPublicKey};
 use std::convert::TryFrom;
 
 pub type PublicKeyBytes = (VarInt, Vec<u8>);
@@ -55,7 +55,10 @@ impl EncryptionRequest {
         let mut verify_token: Vec<u8> = vec![0; 4];
         rng.fill_bytes(&mut verify_token);
 
-        let pem = rsa_der::public_key_to_der(&public_key.n().to_bytes_be(), &public_key.e().to_bytes_be());
+        let pem = rsa_der::public_key_to_der(
+            &public_key.n().to_bytes_be(),
+            &public_key.e().to_bytes_be(),
+        );
 
         Ok((
             private_key,
