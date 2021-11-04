@@ -57,7 +57,7 @@ impl ResolvedPacket {
         ResolvedPacket::new(packet_id, packet)
     }
 
-    pub fn compress(&mut self, compression_threshold: u64) -> anyhow::Result<()> {
+    pub fn compress(&mut self, compression_threshold: i32) -> anyhow::Result<()> {
         if self.uncompressed_length > compression_threshold {
             let packet_id_size = self.packet_id.size()?;
 
@@ -132,7 +132,7 @@ impl ResolvedPacket {
 pub struct PacketWriter<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> {
     internal_writer: T,
     codec: Option<crate::encryption::Codec>,
-    compression_threshold: Option<u64>,
+    compression_threshold: Option<i32>,
 }
 
 impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
@@ -144,7 +144,7 @@ impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
         self.codec = Some(codec);
     }
 
-    pub fn enable_compression(&mut self, compression_threshold: u64) {
+    pub fn enable_compression(&mut self, compression_threshold: i32) {
         self.compression_threshold = Some(compression_threshold);
     }
 

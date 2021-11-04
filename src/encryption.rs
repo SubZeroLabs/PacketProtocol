@@ -1,7 +1,6 @@
 use aes::Aes128;
 use cfb8::cipher::{AsyncStreamCipher, NewCipher};
 use cfb8::Cfb8;
-use rsa::{PaddingScheme, RsaPrivateKey};
 
 pub type EncryptionStream = Cfb8<Aes128>;
 
