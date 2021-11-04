@@ -36,7 +36,7 @@ impl Codec {
         shared_secret: &[u8],
         verify: &[u8],
     ) -> anyhow::Result<(Self, Self)> {
-        if verify.ne(&response_verify) {
+        if verify.ne(response_verify) {
             anyhow::bail!("Failed to assert verify token match.");
         }
         Codec::new(&shared_secret)
