@@ -234,4 +234,11 @@ impl<R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin, W: tokio::io::AsyncW
     pub async fn lock_writer(&self) -> MutexGuard<'_, PacketWriter<W>> {
         self.packet_writer.lock().await
     }
+
+    pub async fn send_packet(&self, packet: &mut ResolvedPacket) -> anyhow::Result<()> {
+        let mut write_lock = self.lock_writer().await;
+        write_lock.send_resolved_packet(packet).await?;
+        drop(write_lock);
+        Ok(())
+    }
 }
