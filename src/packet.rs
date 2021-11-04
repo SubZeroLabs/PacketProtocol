@@ -77,7 +77,7 @@ impl ResolvedPacket {
             self.packet = compressed;
         } else {
             log::debug!("Not compressing packet of length {} for threshold {}", self.uncompressed_length, compression_threshold);
-            self.compression_data = Some((self.uncompressed_length, VarInt::from(0)));
+            self.compression_data = Some((self.uncompressed_length + 1, VarInt::from(0)));
             self.packet = new_packet;
         }
         Ok(())
