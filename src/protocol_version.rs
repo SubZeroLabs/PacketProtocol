@@ -1,22 +1,21 @@
 use std::fmt::{Display, Formatter, Write};
 macro_rules! protocol {
-    ($($protocol_identifier:ident => $protocol_version:literal,)*) => {
+    ($($protocol_identifier:ident => $protocol_version:literal as $string_name:literal,)*) => {
         #[derive(Copy, Clone)]
         pub enum MCProtocol {
             $(
                 $protocol_identifier,
             )*
+            Illegal(minecraft_data_types::nums::VarInt),
         }
 
-        impl std::convert::TryFrom<minecraft_data_types::nums::VarInt> for MCProtocol {
-            type Error = anyhow::Error;
-
-            fn try_from(protocol_number: minecraft_data_types::nums::VarInt) -> anyhow::Result<MCProtocol> {
+        impl From<minecraft_data_types::nums::VarInt> for MCProtocol {
+            fn from(protocol_number: minecraft_data_types::nums::VarInt) -> MCProtocol {
                 match *protocol_number {
                     $(
-                        $protocol_version => Ok(MCProtocol::$protocol_identifier),
+                        $protocol_version => MCProtocol::$protocol_identifier,
                     )*
-                    _ => anyhow::bail!("Unsupported protocol {} detected.", protocol_number),
+                    _ => MCProtocol::Illegal(protocol_number),
                 }
             }
         }
@@ -27,10 +26,15 @@ macro_rules! protocol {
                     $(
                         MCProtocol::$protocol_identifier => {
                             f.write_str("MCProtocol(")?;
-                            f.write_str(stringify!($protocol_identifier))?;
+                            f.write_str($string_name)?;
                             f.write_char(')')
                         },
                     )*
+                    MCProtocol::Illegal(number) => {
+                        f.write_str("MCProtocol(")?;
+                        f.write_str(&format!("{}", number))?;
+                        f.write_char(')')
+                    }
                 }
             }
         }
@@ -38,8 +42,8 @@ macro_rules! protocol {
 }
 
 protocol! {
-    Undefined => 0,
-    V1_17_1 => 756,
+    Undefined => 0 as "Unknown",
+    V1_17_1 => 756 as "1.17.1",
 }
 
 pub trait MapDecodable: Sized {
