@@ -32,21 +32,14 @@ impl Codec {
     }
 
     pub fn from_response(
-        private_key: &RsaPrivateKey,
         response_verify: &[u8],
-        response_shared_secret: &[u8],
+        shared_secret: &[u8],
         verify: &[u8],
     ) -> anyhow::Result<(Self, Self)> {
-        let decrypted_verify =
-            private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, response_verify)?;
-
-        if verify.ne(&decrypted_verify) {
+        if verify.ne(&response_verify) {
             anyhow::bail!("Failed to assert verify token match.");
         }
-
-        let decrypted_shared_secret =
-            private_key.decrypt(PaddingScheme::PKCS1v15Encrypt, response_shared_secret)?;
-        Codec::new(&decrypted_shared_secret)
+        Codec::new(&shared_secret)
     }
 
     pub fn encrypt(&mut self, bytes: &mut [u8]) {
