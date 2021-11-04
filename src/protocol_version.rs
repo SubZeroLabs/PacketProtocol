@@ -9,6 +9,17 @@ macro_rules! protocol {
             Illegal(minecraft_data_types::nums::VarInt),
         }
 
+        impl MCProtocol {
+            pub fn as_i32(self) -> i32 {
+                match self {
+                    $(
+                        MCProtocol::$protocol_identifier => $protocol_version,
+                    )*
+                    MCProtocol::Illegal(number) => number.into(),
+                }
+            }
+        }
+
         impl From<minecraft_data_types::nums::VarInt> for MCProtocol {
             fn from(protocol_number: minecraft_data_types::nums::VarInt) -> MCProtocol {
                 match *protocol_number {
