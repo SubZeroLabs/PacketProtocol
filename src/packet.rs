@@ -103,6 +103,7 @@ impl ResolvedPacket {
         writer: &mut W,
     ) -> anyhow::Result<()> {
         if let Some((packet_length, data_length)) = self.compression_data {
+            log::debug!("Compression Encoding ({}, {}) for {}", packet_length, data_length, self.packet.len());
             packet_length.async_encode(writer).await?;
             data_length.async_encode(writer).await?;
             writer.write_all(&self.packet).await?; // the packet will include the ID if compressed
