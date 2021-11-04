@@ -85,6 +85,7 @@ impl ResolvedPacket {
 
     pub fn write<W: std::io::Write>(&self, writer: &mut W) -> anyhow::Result<()> {
         if let Some((packet_length, data_length)) = self.compression_data {
+            log::debug!("Compression Encoding ({}, {}) for {}", packet_length, data_length, self.packet.len());
             packet_length.encode(writer)?;
             data_length.encode(writer)?;
             writer.write_all(&self.packet)?; // the packet will include the ID if compressed
