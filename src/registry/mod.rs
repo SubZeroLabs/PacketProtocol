@@ -7,6 +7,8 @@ pub mod handshake;
 pub mod login;
 #[cfg(feature = "status")]
 pub mod status;
+#[cfg(feature = "play")]
+pub mod play;
 
 pub trait LazyHandle<T: MapDecodable> {
     fn decode_type(self) -> anyhow::Result<T>;
@@ -347,7 +349,7 @@ macro_rules! create_registry {
         paste::paste! {
             #[async_trait::async_trait]
             pub trait RegistryHandler: Send + Sync {
-                async fn handle_unknown(&mut self, packet_cursor: std::io::Cursor<Vec<u8>>);
+                async fn handle_unknown(&mut self, packet_cursor: std::io::Cursor<Vec<u8>>) -> anyhow::Result<()>;
 
                 async fn handle_default<T: crate::protocol_version::MapDecodable, H: $crate::registry::LazyHandle<T> + Send>(
                     &mut self, handle: H

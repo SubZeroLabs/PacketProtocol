@@ -20,6 +20,7 @@ tokio = { version = "1", features = ["io-util", "time", "sync"] }
 uuid = "0.8.2"
 
 [features]
+all = ["initial_handle", "play"]
 initial_handle = ["handshake", "login", "status"]
 # Defines the Minecraft(Status) the impl is using
 handshake = []

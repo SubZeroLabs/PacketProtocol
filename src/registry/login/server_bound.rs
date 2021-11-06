@@ -30,12 +30,12 @@ create_registry! {
 
 impl EncryptionResponse {
     pub fn new(public_key: &[u8], verify_token: &[u8]) -> anyhow::Result<(Vec<u8>, Self)> {
-        let public_key = RsaPublicKey::from_pkcs1_der(&public_key)?;
+        let public_key = RsaPublicKey::from_pkcs1_der(public_key)?;
 
         let mut rng = OsRng;
 
         let encrypted_verify_token =
-            public_key.encrypt(&mut rng, PaddingScheme::PKCS1v15Encrypt, &verify_token)?;
+            public_key.encrypt(&mut rng, PaddingScheme::PKCS1v15Encrypt, verify_token)?;
 
         let mut shared_secret = vec![0; 16];
         rng.fill_bytes(&mut shared_secret);
