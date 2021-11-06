@@ -5,10 +5,10 @@ use anyhow::Context;
 pub mod handshake;
 #[cfg(feature = "login")]
 pub mod login;
-#[cfg(feature = "status")]
-pub mod status;
 #[cfg(feature = "play")]
 pub mod play;
+#[cfg(feature = "status")]
+pub mod status;
 
 pub trait LazyHandle<T: MapDecodable> {
     fn decode_type(self) -> anyhow::Result<T>;

@@ -160,13 +160,17 @@ impl ResolvedPacket {
     }
 }
 
-pub struct PacketWriter<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> {
+pub trait MovableAsyncRead = tokio::io::AsyncRead + Send + Sync + Sized + Unpin;
+
+pub trait MovableAsyncWrite = tokio::io::AsyncWrite + Send + Sync + Sized + Unpin;
+
+pub struct PacketWriter<T: MovableAsyncWrite> {
     internal_writer: T,
     codec: Option<crate::encryption::Codec>,
     compression_threshold: Option<i32>,
 }
 
-impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
+impl<T: MovableAsyncWrite> PacketWriter<T> {
     pub fn new(internal_writer: T) -> Self {
         PacketWriter {
             internal_writer,
@@ -207,13 +211,13 @@ impl<T: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin> PacketWriter<T> {
     }
 }
 
-pub struct PacketReader<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> {
+pub struct PacketReader<T: MovableAsyncRead> {
     internal_reader: T,
     buffer: crate::buffer::MinecraftPacketBuffer,
     address: Arc<SocketAddr>,
 }
 
-impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
+impl<T: MovableAsyncRead> PacketReader<T> {
     pub fn new(internal_reader: T, address: Arc<SocketAddr>) -> Self {
         PacketReader {
             internal_reader,
@@ -250,7 +254,7 @@ impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
                     if let Err(err) =
-                    timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                        timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
                     {
                         let len = { self.buffer.len() };
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
@@ -267,19 +271,12 @@ impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
     }
 }
 
-pub struct PacketReadWriteLocker<
-    R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin,
-    W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin,
-> {
+pub struct PacketReadWriteLocker<R: MovableAsyncRead, W: MovableAsyncWrite> {
     packet_writer: Arc<Mutex<PacketWriter<W>>>,
     packet_reader: Arc<Mutex<PacketReader<R>>>,
 }
 
-impl<
-    R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin,
-    W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin,
-> PacketReadWriteLocker<R, W>
-{
+impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
     pub fn new(
         packet_writer: Arc<Mutex<PacketWriter<W>>>,
         packet_reader: Arc<Mutex<PacketReader<R>>>,
