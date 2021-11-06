@@ -338,7 +338,7 @@ macro_rules! create_registry {
                             )*)*
                         )*
                         (_, _) => {
-                            anyhow::bail!("Failed to decode packet id {} for {}.", packet_id, target_protocol);
+                            handler.handle_unknown(packet_cursor).await
                         }
                     }
                 }
@@ -347,6 +347,8 @@ macro_rules! create_registry {
         paste::paste! {
             #[async_trait::async_trait]
             pub trait RegistryHandler: Send + Sync {
+                async fn handle_unknown(&mut self, packet_cursor: std::io::Cursor<Vec<u8>>);
+
                 async fn handle_default<T: crate::protocol_version::MapDecodable, H: $crate::registry::LazyHandle<T> + Send>(
                     &mut self, handle: H
                 ) -> anyhow::Result<()>;

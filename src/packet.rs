@@ -6,7 +6,7 @@ use flate2::Compression;
 use minecraft_data_types::{encoder::*, nums::VarInt};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display, Formatter};
-use std::io::Read;
+use std::io::{Read, Seek};
 use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -42,6 +42,19 @@ impl ResolvedPacket {
             compression_data: None,
             packet_id,
             uncompressed_length: packet_id.size()? + VarInt::try_from(packet.len())?,
+            packet,
+        })
+    }
+
+    pub fn from_cursor(mut cursor: std::io::Cursor<Vec<u8>>) -> anyhow::Result<Self> {
+        cursor.rewind()?;
+        let (packet_size, packet_id) = VarInt::decode_and_size(&mut cursor)?;
+        let mut packet = Vec::new();
+        std::io::Read::read_to_end(&mut cursor, &mut packet)?;
+        Ok(Self {
+            compression_data: None,
+            packet_id,
+            uncompressed_length: packet_size + VarInt::try_from(packet.len())?,
             packet,
         })
     }
@@ -237,7 +250,7 @@ impl<T: tokio::io::AsyncRead + Send + Sync + Sized + Unpin> PacketReader<T> {
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
                     if let Err(err) =
-                        timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                    timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
                     {
                         let len = { self.buffer.len() };
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
@@ -263,9 +276,9 @@ pub struct PacketReadWriteLocker<
 }
 
 impl<
-        R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin,
-        W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin,
-    > PacketReadWriteLocker<R, W>
+    R: tokio::io::AsyncRead + Send + Sync + Sized + Unpin,
+    W: tokio::io::AsyncWrite + Send + Sync + Sized + Unpin,
+> PacketReadWriteLocker<R, W>
 {
     pub fn new(
         packet_writer: Arc<Mutex<PacketWriter<W>>>,
