@@ -53,6 +53,7 @@ impl ResolvedPacket {
         let (packet_size, packet_id) = VarInt::decode_and_size(&mut cursor)?;
         let mut packet = Vec::new();
         std::io::Read::read_to_end(&mut cursor, &mut packet)?;
+        log::debug!("Generated packet from cursor: len {}, packet_id: {}", packet_size + VarInt::try_from(packet.len())?, packet_id);
         Ok(Self {
             compression_data: None,
             packet_id,
@@ -145,7 +146,7 @@ impl ResolvedPacket {
         } else {
             log::debug!(
                 "No compression, Encoding ({}) for {} => {}",
-                packet_length,
+                self.uncompressed_length,
                 self.packet.len(),
                 self.packet_id,
             );
