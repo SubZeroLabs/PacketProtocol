@@ -50,7 +50,7 @@ impl MinecraftPacketBuffer {
             if (length + size) <= self.decoded.len() {
                 true
             } else {
-                log::trace!("Looking for: size: {} length: {} but decoded len is: {}", size, length, self.decoded.len());
+                log::debug!("Looking for: size: {} length: {} but decoded len is: {}", size, length, self.decoded.len());
                 false
             }
         } else {
