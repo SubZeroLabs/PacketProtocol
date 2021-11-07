@@ -313,7 +313,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(locker: Arc<PacketReadWri
     let (read, write) = locker.split();
     let (flume_write, flume_read) = flume::unbounded();
 
-    let read_handle: JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
+    let read_handle = tokio::task::spawn(async move {
         loop {
             let mut read_lock = read.lock().await;
             let resolved = read_lock.next_packet().await?;
@@ -321,7 +321,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(locker: Arc<PacketReadWri
             sender.send_async(resolved).await?;
         }
     });
-    let write_handle = tokio::spawn(async move {
+    let write_handle = tokio::task::spawn(async move {
         loop {
             let mut next_packet = flume_read.recv_async().await?;
             let mut write_lock = write.lock().await;
