@@ -162,9 +162,9 @@ impl ResolvedPacket {
     }
 }
 
-pub trait MovableAsyncRead = tokio::io::AsyncRead + Send + Sync + Sized + Unpin;
+pub trait MovableAsyncRead = tokio::io::AsyncRead + Send + Sync + Sized + Unpin + 'static;
 
-pub trait MovableAsyncWrite = tokio::io::AsyncWrite + Send + Sync + Sized + Unpin;
+pub trait MovableAsyncWrite = tokio::io::AsyncWrite + Send + Sync + Sized + Unpin + 'static;
 
 pub struct PacketWriter<T: MovableAsyncWrite> {
     internal_writer: T,
@@ -309,7 +309,7 @@ impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
     }
 }
 
-pub fn spin<R: MovableAsyncRead + 'static, W: MovableAsyncWrite + 'static>(locker: Arc<PacketReadWriteLocker<R, W>>, sender: Sender<std::io::Cursor<Vec<u8>>>) -> (Sender<ResolvedPacket>, JoinHandle<anyhow::Result<()>>, JoinHandle<anyhow::Result<()>>) {
+pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(locker: Arc<PacketReadWriteLocker<R, W>>, sender: Sender<std::io::Cursor<Vec<u8>>>) -> (Sender<ResolvedPacket>, JoinHandle<anyhow::Result<()>>, JoinHandle<anyhow::Result<()>>) {
     let (read, write) = locker.split();
     let (flume_write, flume_read) = flume::unbounded();
 
