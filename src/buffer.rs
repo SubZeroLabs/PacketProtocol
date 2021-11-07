@@ -68,6 +68,7 @@ impl MinecraftPacketBuffer {
             return if self.is_packet_available() {
                 BufferState::PacketReady
             } else if self.decoded.capacity() == self.decoded.len() {
+                log::debug!("Too Big Error, Failed at: Capacity {}, length {}", self.decoded.capacity(), self.decoded.len());
                 BufferState::Error(String::from(
                     "Next packet was too big to decode, something went wrong.",
                 ))
