@@ -256,7 +256,7 @@ impl<T: MovableAsyncRead> PacketReader<T> {
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
                     if let Err(err) =
-                        timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                    timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
                     {
                         let len = { self.buffer.len() };
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
@@ -324,6 +324,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
     let (flume_write, flume_read) = flume::unbounded();
 
     let read_handle = tokio::task::spawn(async move {
+        println!("Open read handle, sender moved internal to task.");
         loop {
             let mut read_lock = read.lock().await;
             let resolved = read_lock.next_packet().await?;
@@ -339,6 +340,5 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
             drop(write_lock);
         }
     });
-
     (flume_write, read_handle, write_handle)
 }
