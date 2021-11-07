@@ -342,7 +342,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         loop {
             let mut read_lock = read.lock().await;
             let resolved = read_lock.next_packet().await.expect(&format!("{} => Next packet never arrived", target));
-            log::debug!(target: &target, "Next packet: {:?}", ResolvedPacket::from_cursor(resolved.clone())?);
+            log::debug!(target: &target, "Next packet: {:?}, vec len: {:?}", ResolvedPacket::from_cursor(resolved.clone())?, resolved.clone().into_inner().len());
             drop(read_lock);
             sender.send(resolved).expect("Failed to send.");
         }
