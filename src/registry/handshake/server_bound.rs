@@ -2,7 +2,7 @@ use crate::create_registry;
 use crate::strict_enum;
 use minecraft_data_types::auto_string;
 
-auto_string!(ServerAddress, 255);
+auto_string!(ServerAddress, 32767);
 
 strict_enum! {
     NextState; minecraft_data_types::nums::VarInt {
