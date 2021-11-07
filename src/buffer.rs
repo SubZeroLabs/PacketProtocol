@@ -126,7 +126,9 @@ impl MinecraftPacketBuffer {
         } else {
             cursor
         };
+        log::debug!("ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         self.decoded.advance(length.try_into()?);
+        log::debug!("POST ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         Ok(cursor)
     }
 }
