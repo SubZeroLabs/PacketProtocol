@@ -131,17 +131,24 @@ impl ResolvedPacket {
         writer: &mut W,
     ) -> anyhow::Result<()> {
         if let Some((packet_length, data_length)) = self.compression_data {
-            log::trace!(
-                "Compression Encoding ({}, {}) for {}",
+            log::debug!(
+                "Compression Encoding ({}, {}) for {} => {}",
                 packet_length,
                 data_length,
-                self.packet.len()
+                self.packet.len(),
+                self.packet_id,
             );
             packet_length.async_encode(writer).await?;
             data_length.async_encode(writer).await?;
             writer.write_all(&self.packet).await?; // the packet will include the ID if compressed
             Ok(())
         } else {
+            log::debug!(
+                "No compression, Encoding ({}) for {} => {}",
+                packet_length,
+                self.packet.len(),
+                self.packet_id,
+            );
             self.uncompressed_length.async_encode(writer).await?;
             self.packet_id.async_encode(writer).await?;
             writer.write_all(&self.packet).await?;
@@ -329,16 +336,11 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         let target = format!("read/{}", read_identifier);
         log::debug!(target: &target, "Open read handle, sender moved internal to task.");
         loop {
-            log::debug!(target: &target, "Locking read.");
             let mut read_lock = read.lock().await;
-            log::debug!(target: &target, "Waiting for packet.");
             let resolved = read_lock.next_packet().await.expect(&format!("{} => Next packet never arrived", target));
             log::debug!(target: &target, "Next packet: {:?}", ResolvedPacket::from_cursor(resolved.clone())?);
-            log::debug!(target: &target, "Dropping read lock");
             drop(read_lock);
-            log::debug!(target: &target, "Sending to sender");
             sender.send(resolved).expect("Failed to send.");
-            log::debug!(target: &target, "Loop back");
         }
     });
     let write_identifier = identifier.clone();
@@ -346,16 +348,11 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         let target = format!("write/{}", write_identifier);
         log::debug!(target: &target, "Open write handle.");
         loop {
-            log::debug!(target: &target, "Write Handle: Waiting for packet read.");
             let mut next_packet = flume_read.recv().expect(&format!("{} => Never read a packet.", target));
             log::debug!(target: &target, "Write Handle: Next Packet: {:?}", next_packet);
-            log::debug!(target: &target, "Write Handle: Locking writer.");
             let mut write_lock = write.lock().await;
-            log::debug!(target: &target, "Write Handle: Sending packet into locked writer.");
             write_lock.send_resolved_packet(&mut next_packet).await?;
-            log::debug!(target: &target, "Write Handle: Dropping write lock");
             drop(write_lock);
-            log::debug!(target: &target, "Write Handle: Loop back");
         }
     });
     (flume_write, read_handle, write_handle)
