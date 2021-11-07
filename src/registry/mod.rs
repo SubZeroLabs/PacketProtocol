@@ -1,5 +1,6 @@
 use crate::protocol_version::{MCProtocol, MapDecodable};
 use anyhow::Context;
+use crate::packet::ResolvedPacket;
 
 #[cfg(feature = "handshake")]
 pub mod handshake;
@@ -14,6 +15,8 @@ pub trait LazyHandle<T: MapDecodable> {
     fn decode_type(self) -> anyhow::Result<T>;
 
     fn pass_bytes<W: std::io::Write>(self, writer: &mut W) -> anyhow::Result<()>;
+
+    fn into_resolved_packet(self) -> anyhow::Result<ResolvedPacket>;
 
     fn consume_bytes(self) -> anyhow::Result<()>;
 }
@@ -38,6 +41,10 @@ impl<T: MapDecodable> LazyHandle<T> for SimpleLazyHandle {
         writer
             .write_all(&self.bytes.into_inner())
             .context("Failed to pass through bytes to writer.")
+    }
+
+    fn into_resolved_packet(self) -> anyhow::Result<ResolvedPacket> {
+        ResolvedPacket::from_cursor(self.bytes)
     }
 
     fn consume_bytes(self) -> anyhow::Result<()> {
