@@ -332,7 +332,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
             log::debug!(target: &target, "Locking read.");
             let mut read_lock = read.lock().await;
             log::debug!(target: &target, "Waiting for packet.");
-            let resolved = read_lock.next_packet().await.expect("Next packet never arrived");
+            let resolved = read_lock.next_packet().await.expect(&format!("{} => Next packet never arrived", target));
             log::debug!(target: &target, "Next packet: {:?}", ResolvedPacket::from_cursor(resolved.clone())?);
             log::debug!(target: &target, "Dropping read lock");
             drop(read_lock);
@@ -347,7 +347,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         log::debug!(target: &target, "Open write handle.");
         loop {
             log::debug!(target: &target, "Write Handle: Waiting for packet read.");
-            let mut next_packet = flume_read.recv().expect("Never read a packet.");
+            let mut next_packet = flume_read.recv().expect(&format!("{} => Never read a packet.", target));
             log::debug!(target: &target, "Write Handle: Next Packet: {:?}", next_packet);
             log::debug!(target: &target, "Write Handle: Locking writer.");
             let mut write_lock = write.lock().await;
