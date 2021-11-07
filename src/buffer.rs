@@ -17,11 +17,13 @@ pub struct MinecraftPacketBuffer {
     decompressing: bool,
 }
 
+const BUFFER_CAPACITY: usize = 2097151 + 3;
+
 impl MinecraftPacketBuffer {
     pub fn new() -> Self {
         MinecraftPacketBuffer {
-            bytes: BytesMut::with_capacity(2097151 + 3),
-            decoded: BytesMut::with_capacity(2097151 + 3),
+            bytes: BytesMut::with_capacity(BUFFER_CAPACITY),
+            decoded: BytesMut::with_capacity(BUFFER_CAPACITY),
             decryption: None,
             decompressing: false,
         }
@@ -92,6 +94,7 @@ impl MinecraftPacketBuffer {
         self.decoded.put_slice(read_half);
 
         self.bytes.advance(size_read);
+        self.bytes.reserve(BUFFER_CAPACITY);
 
         if self.is_packet_available() {
             BufferState::PacketReady
@@ -128,6 +131,7 @@ impl MinecraftPacketBuffer {
         };
         log::debug!("ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         self.decoded.advance(length.try_into()?);
+        self.decoded.reserve(BUFFER_CAPACITY);
         log::debug!("POST ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         Ok(cursor)
     }
