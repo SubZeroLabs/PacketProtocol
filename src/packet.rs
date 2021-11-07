@@ -330,10 +330,11 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
             let mut read_lock = read.lock().await;
             println!("Read Handle: Waiting for packet.");
             let resolved = read_lock.next_packet().await.expect("Next packet never arrived");
+            println!("Read Handle: Next packet: {:?}", resolved);
             println!("Read Handle: Dropping read lock");
             drop(read_lock);
             println!("Read Handle: Sending to sender");
-            sender.send_async(resolved).await.expect("Failed to send.");
+            sender.send(resolved).expect("Failed to send.");
             println!("Read Handle: Loop back");
         }
     });
@@ -341,7 +342,8 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         println!("Read Handle: Open write handle.");
         loop {
             println!("Write Handle: Waiting for packet read.");
-            let mut next_packet = flume_read.recv_async().await.expect("Never read a packet.");
+            let mut next_packet = flume_read.recv().expect("Never read a packet.");
+            println!("Write Handle: Next Packet: {:?}", next_packet);
             println!("Write Handle: Locking writer.");
             let mut write_lock = write.lock().await;
             println!("Write Handle: Sending packet into locked writer.");
