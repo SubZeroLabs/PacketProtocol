@@ -28,13 +28,13 @@ pub struct ResolvedPacket {
 
 impl Display for ResolvedPacket {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.packet_id)
+        write!(f, "{}, {}", self.packet_id, self.uncompressed_length)
     }
 }
 
 impl Debug for ResolvedPacket {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.packet_id)
+        write!(f, "{}, {}", self.packet_id, self.uncompressed_length)
     }
 }
 
@@ -333,7 +333,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
             let mut read_lock = read.lock().await;
             log::debug!(target: &target, "Waiting for packet.");
             let resolved = read_lock.next_packet().await.expect("Next packet never arrived");
-            log::debug!(target: &target, "Next packet: {:?}", resolved);
+            log::debug!(target: &target, "Next packet: {:?}", ResolvedPacket::from_cursor(resolved.clone())?);
             log::debug!(target: &target, "Dropping read lock");
             drop(read_lock);
             log::debug!(target: &target, "Sending to sender");
