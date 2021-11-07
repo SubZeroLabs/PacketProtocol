@@ -53,7 +53,7 @@ impl ResolvedPacket {
         let (packet_size, packet_id) = VarInt::decode_and_size(&mut cursor)?;
         let mut packet = Vec::new();
         std::io::Read::read_to_end(&mut cursor, &mut packet)?;
-        log::debug!("Generated packet from cursor: len {}, packet_id: {}, packet_len: {}", packet_size + VarInt::try_from(packet.len())?, packet_id, packet.len());
+        log::trace!("Generated packet from cursor: len {}, packet_id: {}, packet_len: {}", packet_size + VarInt::try_from(packet.len())?, packet_id, packet.len());
         Ok(Self {
             compression_data: None,
             packet_id,
@@ -132,7 +132,7 @@ impl ResolvedPacket {
         writer: &mut W,
     ) -> anyhow::Result<()> {
         if let Some((packet_length, data_length)) = self.compression_data {
-            log::debug!(
+            log::trace!(
                 "Compression Encoding ({}, {}) for {} => {}",
                 packet_length,
                 data_length,
@@ -144,7 +144,7 @@ impl ResolvedPacket {
             writer.write_all(&self.packet).await?; // the packet will include the ID if compressed
             Ok(())
         } else {
-            log::debug!(
+            log::trace!(
                 "No compression, Encoding ({}) for {} => {}",
                 self.uncompressed_length,
                 self.packet.len(),
@@ -190,7 +190,6 @@ impl<T: MovableAsyncWrite> PacketWriter<T> {
     }
 
     pub fn enable_encryption(&mut self, codec: crate::encryption::Codec) {
-        println!("Enabled encryption on packet writer.");
         self.codec = Some(codec);
     }
 
@@ -206,7 +205,6 @@ impl<T: MovableAsyncWrite> PacketWriter<T> {
             packet.compress(compression)?;
         }
         if let Some(codec) = &mut self.codec {
-            println!("Encrypting packet {:?}", &packet);
             let mut buf = Vec::with_capacity(packet.size()?);
             packet.write_async(&mut buf).await?;
             codec.encrypt(&mut buf);
@@ -215,7 +213,6 @@ impl<T: MovableAsyncWrite> PacketWriter<T> {
                 .await
                 .context("Failed to write encoded packet.")
         } else {
-            println!("Sending packet with no encryption {:?}", &packet);
             packet
                 .write_async(&mut self.internal_writer)
                 .await
@@ -338,11 +335,11 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
     let read_identifier = identifier.clone();
     let read_handle = tokio::task::spawn(async move {
         let target = format!("read/{}", read_identifier);
-        log::debug!(target: &target, "Open read handle, sender moved internal to task.");
+        log::trace!(target: &target, "Open read handle, sender moved internal to task.");
         loop {
             let mut read_lock = read.lock().await;
             let resolved = read_lock.next_packet().await.expect(&format!("{} => Next packet never arrived", target));
-            log::debug!(target: &target, "Next packet: {:?}, vec len: {:?}", ResolvedPacket::from_cursor(resolved.clone())?, resolved.clone().into_inner().len());
+            log::trace!(target: &target, "Next packet: {:?}, vec len: {:?}", ResolvedPacket::from_cursor(resolved.clone())?, resolved.clone().into_inner().len());
             drop(read_lock);
             sender.send(resolved).expect("Failed to send.");
         }
@@ -350,10 +347,10 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
     let write_identifier = identifier.clone();
     let write_handle = tokio::task::spawn(async move {
         let target = format!("write/{}", write_identifier);
-        log::debug!(target: &target, "Open write handle.");
+        log::trace!(target: &target, "Open write handle.");
         loop {
             let mut next_packet = flume_read.recv().expect(&format!("{} => Never read a packet.", target));
-            log::debug!(target: &target, "Write Handle: Next Packet: {:?}", next_packet);
+            log::trace!(target: &target, "Write Handle: Next Packet: {:?}", next_packet);
             let mut write_lock = write.lock().await;
             write_lock.send_resolved_packet(&mut next_packet).await?;
             drop(write_lock);

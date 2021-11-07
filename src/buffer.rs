@@ -47,7 +47,12 @@ impl MinecraftPacketBuffer {
         let mut cursor: Cursor<&[u8]> = Cursor::new(self.decoded.chunk());
 
         if let Ok((size, length)) = VarInt::decode_and_size(&mut cursor) {
-            (length + size) <= self.decoded.len()
+            if (length + size) <= self.decoded.len() {
+                true
+            } else {
+                log::trace!("Looking for: size: {} length: {} but decoded len is: {}", size, length, self.decoded.len());
+                false
+            }
         } else {
             false
         }
