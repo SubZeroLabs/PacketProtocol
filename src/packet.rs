@@ -3,6 +3,7 @@ use crate::protocol_version::{MCProtocol, MapEncodable};
 use anyhow::Context;
 use flate2::bufread::ZlibEncoder;
 use flate2::Compression;
+use flume::Sender;
 use minecraft_data_types::{encoder::*, nums::VarInt};
 use std::convert::{TryFrom, TryInto};
 use std::fmt::{Debug, Display, Formatter};
@@ -11,9 +12,8 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, MutexGuard};
-use tokio::time::{timeout_at, Duration, Instant};
 use tokio::task::JoinHandle;
-use flume::Sender;
+use tokio::time::{timeout_at, Duration, Instant};
 
 pub trait WritablePacket: MapEncodable {
     fn to_resolved_packet(&self, protocol: MCProtocol) -> anyhow::Result<ResolvedPacket>;
@@ -256,7 +256,7 @@ impl<T: MovableAsyncRead> PacketReader<T> {
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
                     if let Err(err) =
-                    timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                        timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
                     {
                         let len = { self.buffer.len() };
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
@@ -290,7 +290,10 @@ impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
     }
 
     pub fn split(&self) -> (Arc<Mutex<PacketReader<R>>>, Arc<Mutex<PacketWriter<W>>>) {
-        (Arc::clone(&self.packet_reader), Arc::clone(&self.packet_writer))
+        (
+            Arc::clone(&self.packet_reader),
+            Arc::clone(&self.packet_writer),
+        )
     }
 
     pub async fn lock_reader(&self) -> MutexGuard<'_, PacketReader<R>> {
@@ -309,7 +312,14 @@ impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
     }
 }
 
-pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(locker: Arc<PacketReadWriteLocker<R, W>>, sender: Sender<std::io::Cursor<Vec<u8>>>) -> (Sender<ResolvedPacket>, JoinHandle<anyhow::Result<()>>, JoinHandle<anyhow::Result<()>>) {
+pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
+    locker: Arc<PacketReadWriteLocker<R, W>>,
+    sender: Sender<std::io::Cursor<Vec<u8>>>,
+) -> (
+    Sender<ResolvedPacket>,
+    JoinHandle<anyhow::Result<()>>,
+    JoinHandle<anyhow::Result<()>>,
+) {
     let (read, write) = locker.split();
     let (flume_write, flume_read) = flume::unbounded();
 
