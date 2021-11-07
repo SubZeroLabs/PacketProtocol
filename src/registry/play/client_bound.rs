@@ -6,5 +6,10 @@ create_registry! {
     Disconnect {
         reason: Chat,
         |LocalProtocol => (MCProtocol::V1_17_1) => (0x1A);
+        |Protocol {
+            (_) => (0x1A) {
+                (anyhow::bail!("Unsupported version."))
+            }
+        }
     }
 }
