@@ -324,36 +324,38 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
     let (read, write) = locker.split();
     let (flume_write, flume_read) = flume::unbounded();
 
+    let read_identifier = identifier.clone();
     let read_handle = tokio::task::spawn(async move {
-        let target = format!("read/{}", identifier);
-        log::debug!("Open read handle, sender moved internal to task.");
+        let target = format!("read/{}", read_identifier);
+        log::debug!(target: &target, "Open read handle, sender moved internal to task.");
         loop {
-            log::debug!(target: target, "Locking read.");
+            log::debug!(target: &target, "Locking read.");
             let mut read_lock = read.lock().await;
-            log::debug!(target: target, "Waiting for packet.");
+            log::debug!(target: &target, "Waiting for packet.");
             let resolved = read_lock.next_packet().await.expect("Next packet never arrived");
-            log::debug!(target: target, "Next packet: {:?}", resolved);
-            log::debug!(target: target, "Dropping read lock");
+            log::debug!(target: &target, "Next packet: {:?}", resolved);
+            log::debug!(target: &target, "Dropping read lock");
             drop(read_lock);
-            log::debug!(target: target, "Sending to sender");
+            log::debug!(target: &target, "Sending to sender");
             sender.send(resolved).expect("Failed to send.");
-            log::debug!(target: target, "Loop back");
+            log::debug!(target: &target, "Loop back");
         }
     });
+    let write_identifier = identifier.clone();
     let write_handle = tokio::task::spawn(async move {
-        let target = format!("write/{}", identifier);
-        log::debug!(target: target, "Open write handle.");
+        let target = format!("write/{}", write_identifier);
+        log::debug!(target: &target, "Open write handle.");
         loop {
-            log::debug!("Write Handle: Waiting for packet read.");
+            log::debug!(target: &target, "Write Handle: Waiting for packet read.");
             let mut next_packet = flume_read.recv().expect("Never read a packet.");
-            log::debug!("Write Handle: Next Packet: {:?}", next_packet);
-            log::debug!("Write Handle: Locking writer.");
+            log::debug!(target: &target, "Write Handle: Next Packet: {:?}", next_packet);
+            log::debug!(target: &target, "Write Handle: Locking writer.");
             let mut write_lock = write.lock().await;
-            log::debug!("Write Handle: Sending packet into locked writer.");
+            log::debug!(target: &target, "Write Handle: Sending packet into locked writer.");
             write_lock.send_resolved_packet(&mut next_packet).await?;
-            log::debug!("Write Handle: Dropping write lock");
+            log::debug!(target: &target, "Write Handle: Dropping write lock");
             drop(write_lock);
-            log::debug!("Write Handle: Loop back");
+            log::debug!(target: &target, "Write Handle: Loop back");
         }
     });
     (flume_write, read_handle, write_handle)
