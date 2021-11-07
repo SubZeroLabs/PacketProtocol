@@ -324,20 +324,31 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
     let (flume_write, flume_read) = flume::unbounded();
 
     let read_handle = tokio::task::spawn(async move {
-        println!("Open read handle, sender moved internal to task.");
+        println!("Read Handle: Open read handle, sender moved internal to task.");
         loop {
+            println!("Read Handle: Locking read.");
             let mut read_lock = read.lock().await;
-            let resolved = read_lock.next_packet().await?;
+            println!("Read Handle: Waiting for packet.");
+            let resolved = read_lock.next_packet().await.expect("Next packet never arrived");
+            println!("Read Handle: Dropping read lock");
             drop(read_lock);
-            sender.send_async(resolved).await?;
+            println!("Read Handle: Sending to sender");
+            sender.send_async(resolved).await.expect("Failed to send.");
+            println!("Read Handle: Loop back");
         }
     });
     let write_handle = tokio::task::spawn(async move {
+        println!("Read Handle: Open write handle.");
         loop {
-            let mut next_packet = flume_read.recv_async().await?;
+            println!("Write Handle: Waiting for packet read.");
+            let mut next_packet = flume_read.recv_async().await.expect("Never read a packet.");
+            println!("Write Handle: Locking writer.");
             let mut write_lock = write.lock().await;
+            println!("Write Handle: Sending packet into locked writer.");
             write_lock.send_resolved_packet(&mut next_packet).await?;
+            println!("Write Handle: Dropping write lock");
             drop(write_lock);
+            println!("Write Handle: Loop back");
         }
     });
     (flume_write, read_handle, write_handle)
