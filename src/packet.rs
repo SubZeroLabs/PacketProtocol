@@ -262,7 +262,7 @@ impl<T: MovableAsyncRead> PacketReader<T> {
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
                         anyhow::bail!("Error occurred reading buffer: {:?}", err);
                     } else if let (0, 0) = self.buffer.len() {
-                        log::debug!(target: &self.address.to_string(), "Found empty buffer, continuing carefully.");
+                        anyhow::bail!("Found buffer EOF when not expected, ending.");
                     }
                 }
                 BufferState::Error(error) => {
