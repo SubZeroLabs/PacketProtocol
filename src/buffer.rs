@@ -1,7 +1,7 @@
 use bytes::{Buf, BufMut, BytesMut};
 use flate2::bufread::ZlibDecoder;
 use minecraft_data_types::nums::VarInt;
-use std::convert::TryInto;
+use std::convert::{TryInto, TryFrom};
 use std::io::{Cursor, Read};
 
 pub enum BufferState {
@@ -91,7 +91,7 @@ impl MinecraftPacketBuffer {
 
         self.decoded.put_slice(read_half);
 
-        self.bytes.advance(size_read);
+        self.bytes = self.bytes.split_to(size_read);
 
         if self.is_packet_available() {
             BufferState::PacketReady
@@ -127,7 +127,7 @@ impl MinecraftPacketBuffer {
             cursor
         };
         log::debug!("ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
-        self.decoded.advance(length.try_into()?);
+        self.decoded = self.decoded.split_to(usize::try_from(length_size)? + usize::try_from(length)?);
         log::debug!("POST ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         Ok(cursor)
     }
