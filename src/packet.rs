@@ -190,6 +190,7 @@ impl<T: MovableAsyncWrite> PacketWriter<T> {
     }
 
     pub fn enable_encryption(&mut self, codec: crate::encryption::Codec) {
+        println!("Enabled encryption on packet writer.");
         self.codec = Some(codec);
     }
 
@@ -205,6 +206,7 @@ impl<T: MovableAsyncWrite> PacketWriter<T> {
             packet.compress(compression)?;
         }
         if let Some(codec) = &mut self.codec {
+            println!("Encrypting packet {:?}", &packet);
             let mut buf = Vec::with_capacity(packet.size()?);
             packet.write_async(&mut buf).await?;
             codec.encrypt(&mut buf);
@@ -213,6 +215,7 @@ impl<T: MovableAsyncWrite> PacketWriter<T> {
                 .await
                 .context("Failed to write encoded packet.")
         } else {
+            println!("Sending packet with no encryption {:?}", &packet);
             packet
                 .write_async(&mut self.internal_writer)
                 .await
