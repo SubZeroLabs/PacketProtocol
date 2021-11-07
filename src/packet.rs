@@ -12,6 +12,8 @@ use std::sync::Arc;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::{Mutex, MutexGuard};
 use tokio::time::{timeout_at, Duration, Instant};
+use tokio::task::JoinHandle;
+use flume::Sender;
 
 pub trait WritablePacket: MapEncodable {
     fn to_resolved_packet(&self, protocol: MCProtocol) -> anyhow::Result<ResolvedPacket>;
@@ -254,7 +256,7 @@ impl<T: MovableAsyncRead> PacketReader<T> {
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
                     if let Err(err) =
-                        timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                    timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
                     {
                         let len = { self.buffer.len() };
                         log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
@@ -287,6 +289,10 @@ impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
         }
     }
 
+    pub fn split(&self) -> (Arc<Mutex<PacketReader<R>>>, Arc<Mutex<PacketWriter<W>>>) {
+        (Arc::clone(&self.packet_reader), Arc::clone(&self.packet_writer))
+    }
+
     pub async fn lock_reader(&self) -> MutexGuard<'_, PacketReader<R>> {
         self.packet_reader.lock().await
     }
@@ -301,4 +307,28 @@ impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
         drop(write_lock);
         Ok(())
     }
+}
+
+pub fn spin<R: MovableAsyncRead + 'static, W: MovableAsyncWrite + 'static>(locker: Arc<PacketReadWriteLocker<R, W>>, sender: Sender<std::io::Cursor<Vec<u8>>>) -> (Sender<ResolvedPacket>, JoinHandle<anyhow::Result<()>>, JoinHandle<anyhow::Result<()>>) {
+    let (read, write) = locker.split();
+    let (flume_write, flume_read) = flume::unbounded();
+
+    let read_handle: JoinHandle<anyhow::Result<()>> = tokio::spawn(async move {
+        loop {
+            let mut read_lock = read.lock().await;
+            let resolved = read_lock.next_packet().await?;
+            drop(read_lock);
+            sender.send_async(resolved).await?;
+        }
+    });
+    let write_handle = tokio::spawn(async move {
+        loop {
+            let mut next_packet = flume_read.recv_async().await?;
+            let mut write_lock = write.lock().await;
+            write_lock.send_resolved_packet(&mut next_packet).await?;
+            drop(write_lock);
+        }
+    });
+
+    (flume_write, read_handle, write_handle)
 }
