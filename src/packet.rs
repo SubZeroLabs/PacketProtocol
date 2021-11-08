@@ -338,10 +338,10 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         log::trace!(target: &target, "Open read handle, sender moved internal to task.");
         loop {
             let mut read_lock = read.lock().await;
-            let resolved = read_lock.next_packet().await.expect(&format!("{} => Next packet never arrived", target));
+            let resolved = read_lock.next_packet().await?;
             log::trace!(target: &target, "Next packet: {:?}, vec len: {:?}", ResolvedPacket::from_cursor(resolved.clone())?, resolved.clone().into_inner().len());
             drop(read_lock);
-            sender.send(resolved).expect("Failed to send.");
+            sender.send(resolved)?;
         }
     });
     let write_identifier = identifier.clone();
@@ -349,7 +349,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
         let target = format!("write/{}", write_identifier);
         log::trace!(target: &target, "Open write handle.");
         loop {
-            let mut next_packet = flume_read.recv().expect(&format!("{} => Never read a packet.", target));
+            let mut next_packet = flume_read.recv()?;
             log::trace!(target: &target, "Write Handle: Next Packet: {:?}", next_packet);
             let mut write_lock = write.lock().await;
             write_lock.send_resolved_packet(&mut next_packet).await?;
