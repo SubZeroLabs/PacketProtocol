@@ -73,7 +73,7 @@ macro_rules! strict_enum {
             impl minecraft_data_types::encoder::Decodable for $enum_name {
                 fn decode<R: std::io::Read>(reader: &mut R) -> anyhow::Result<Self> {
                     let index = <$index_type>::decode(reader)?;
-                    match *index {
+                    match &*index {
                         $(
                             $byte_representation => Ok($enum_name::$option_name),
                         )*
