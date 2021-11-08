@@ -1,8 +1,19 @@
 use crate::create_registry;
 use crate::protocol_version::MCProtocol;
-use minecraft_data_types::common::Chat;
+use minecraft_data_types::common::{Chat, Identifier};
 
 create_registry! {
+    PluginMessage {
+        channel: Identifier,
+        data: Vec<u8>,
+        |LocalProtocol => (MCProtocol::V1_17_1) => (0x18);
+        |Protocol {
+            (_) => (0x18) {
+                (anyhow::bail!("Unsupported version."))
+            }
+        }
+    }
+
     Disconnect {
         reason: Chat,
         |LocalProtocol => (MCProtocol::V1_17_1) => (0x1A);
