@@ -94,7 +94,7 @@ impl MinecraftPacketBuffer {
         self.decoded.put_slice(read_half);
 
         self.bytes.advance(size_read);
-        self.bytes.reserve(BUFFER_CAPACITY);
+        self.bytes.reserve(BUFFER_CAPACITY - self.bytes.len());
 
         if self.is_packet_available() {
             BufferState::PacketReady
@@ -131,7 +131,7 @@ impl MinecraftPacketBuffer {
         };
         log::debug!("ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         self.decoded.advance(length.try_into()?);
-        self.decoded.reserve(BUFFER_CAPACITY);
+        self.decoded.reserve(BUFFER_CAPACITY - self.decoded.len());
         log::debug!("POST ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         Ok(cursor)
     }
