@@ -49,12 +49,7 @@ impl MinecraftPacketBuffer {
         let mut cursor: Cursor<&[u8]> = Cursor::new(self.decoded.chunk());
 
         if let Ok((size, length)) = VarInt::decode_and_size(&mut cursor) {
-            if (length + size) <= self.decoded.len() {
-                true
-            } else {
-                log::debug!("Looking for: size: {} length: {} but decoded len is: {} .. {} <= {} = {:?}", size, length, self.decoded.len(), length + size, self.decoded.len(), length + size <= self.decoded.len());
-                false
-            }
+            (length + size) <= self.decoded.len()
         } else {
             false
         }
@@ -129,10 +124,8 @@ impl MinecraftPacketBuffer {
         } else {
             cursor
         };
-        log::debug!("ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         self.decoded.advance(length.try_into()?);
         self.decoded.reserve(BUFFER_CAPACITY - self.decoded.len());
-        log::debug!("POST ADVANCING: {}, {}, {}", self.decoded.capacity(), self.decoded.len(), length);
         Ok(cursor)
     }
 }
