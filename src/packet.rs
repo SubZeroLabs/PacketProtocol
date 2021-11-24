@@ -28,13 +28,13 @@ pub struct ResolvedPacket {
 
 impl Display for ResolvedPacket {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, {}", self.packet_id, self.uncompressed_length)
+        write!(f, "(ID={}[{:x}], {})", self.packet_id, Into::<i32>::into(self.packet_id), self.uncompressed_length)
     }
 }
 
 impl Debug for ResolvedPacket {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "(ID={}[{:x}], {})", self.packet_id, Into::<i32>::into(self.packet_id), self.uncompressed_length)
+        write!(f, "{}", self)
     }
 }
 
