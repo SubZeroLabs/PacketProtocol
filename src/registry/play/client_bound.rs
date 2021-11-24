@@ -1,6 +1,6 @@
 use crate::create_registry;
 use crate::protocol_version::MCProtocol;
-use minecraft_data_types::common::{Chat, Identifier};
+use minecraft_data_types::{nums::VarInt, common::{Chat, Identifier}};
 use commander::protocol::Node;
 
 create_registry! {
