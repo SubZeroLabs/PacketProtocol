@@ -267,8 +267,7 @@ impl<T: MovableAsyncRead> PacketReader<T> {
                     timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
                     {
                         let len = { self.buffer.len() };
-                        log::trace!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
-                        anyhow::bail!("Error occurred reading buffer: {:?}", err);
+                        log::warn!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
                     } else if let (0, 0) = self.buffer.len() {
                         anyhow::bail!("Found buffer EOF when not expected, ending.");
                     }
