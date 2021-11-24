@@ -263,8 +263,7 @@ impl<T: MovableAsyncRead> PacketReader<T> {
                 }
                 BufferState::Waiting => {
                     log::trace!(target: &self.address.to_string(), "Buf read awaiting packet: Encoded {}, Decoded: {}", encoded, decoded);
-                    if let Err(err) =
-                    timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await
+                    if timeout_at(Instant::now() + Duration::from_secs(10), self.read_buf()).await.is_err()
                     {
                         let len = { self.buffer.len() };
                         log::warn!(target: &self.address.to_string(), "Failed read with buffer: {:?}, {:?}", self.buffer.inner_buf(), len);
@@ -343,7 +342,7 @@ pub fn spin<R: MovableAsyncRead, W: MovableAsyncWrite>(
             sender.send(resolved)?;
         }
     });
-    let write_identifier = identifier.clone();
+    let write_identifier = identifier;
     let write_handle = tokio::task::spawn(async move {
         let target = format!("write/{}", write_identifier);
         log::trace!(target: &target, "Open write handle.");

@@ -5,6 +5,7 @@ edition = "2021"
 
 [dependencies]
 minecraft_data_types = { version = "0.1.0", git = "https://github.com/SubZeroLabs/MinecraftTypes", branch = "master" }
+commander = { version = "0.1.0", git = "https://github.com/SubZeroLabs/Commander", branch = "master" }
 anyhow = "1.0.44"
 paste = "1.0.5"
 bytes = "1.1.0"

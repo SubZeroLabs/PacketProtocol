@@ -1,8 +1,20 @@
 use crate::create_registry;
 use crate::protocol_version::MCProtocol;
 use minecraft_data_types::common::{Chat, Identifier};
+use commander::protocol::Node;
 
 create_registry! {
+    DeclareCommands {
+        nodes: (VarInt, Vec<Node>),
+        root_index: VarInt,
+        |LocalProtocol => (MCProtocol::V1_17_1) => (0x12);
+        |Protocol {
+            (_) => (0x12) {
+                (anyhow::bail!("Unsupported version."))
+            }
+        }
+    }
+
     PluginMessage {
         channel: Identifier,
         data: Vec<u8>,
