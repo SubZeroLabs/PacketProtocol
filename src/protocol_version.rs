@@ -1,4 +1,4 @@
-use std::fmt::{Display, Formatter, Write};
+use std::fmt::{Debug, Formatter, Write};
 macro_rules! protocol {
     ($($string_name:literal => $protocol_version:literal as $protocol_identifier:ident,)*) => {
         #[derive(Copy, Clone)]
@@ -20,6 +20,15 @@ macro_rules! protocol {
             }
         }
 
+        impl ToString for MCProtocol {
+            fn to_string(&self) -> std::string::String {
+                match self {
+                    $(MCProtocol::$protocol_identifier => $string_name.to_string(),)*
+                    _ => String::from("Unknown"),
+                }
+            }
+        }
+
         impl From<minecraft_data_types::nums::VarInt> for MCProtocol {
             fn from(protocol_number: minecraft_data_types::nums::VarInt) -> MCProtocol {
                 match *protocol_number {
@@ -31,7 +40,7 @@ macro_rules! protocol {
             }
         }
 
-        impl Display for MCProtocol {
+        impl Debug for MCProtocol {
             fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 match self {
                     $(
