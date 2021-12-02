@@ -1,4 +1,5 @@
-use std::fmt::{Debug, Formatter, Write};
+use std::{cmp::{PartialOrd, PartialEq}, fmt::{Debug, Formatter, Write}};
+use minecraft_data_types::nums::VarInt;
 macro_rules! protocol {
     ($($string_name:literal => $protocol_version:literal as $protocol_identifier:ident,)*) => {
         #[derive(Copy, Clone)]
@@ -6,11 +7,11 @@ macro_rules! protocol {
             $(
                 $protocol_identifier,
             )*
-            Illegal(minecraft_data_types::nums::VarInt),
+            Illegal(VarInt),
         }
 
         impl MCProtocol {
-            pub fn as_i32(self) -> i32 {
+            pub fn as_i32(&self) -> i32 {
                 match self {
                     $(
                         MCProtocol::$protocol_identifier => $protocol_version,
@@ -29,8 +30,8 @@ macro_rules! protocol {
             }
         }
 
-        impl From<minecraft_data_types::nums::VarInt> for MCProtocol {
-            fn from(protocol_number: minecraft_data_types::nums::VarInt) -> MCProtocol {
+        impl From<VarInt> for MCProtocol {
+            fn from(protocol_number: VarInt) -> MCProtocol {
                 match *protocol_number {
                     $(
                         $protocol_version => MCProtocol::$protocol_identifier,
@@ -56,6 +57,18 @@ macro_rules! protocol {
                         f.write_char(')')
                     }
                 }
+            }
+        }
+
+        impl PartialEq for MCProtocol {
+            fn eq(&self, other: &Self) -> bool {
+                self.as_i32().eq(&other.as_i32())
+            }
+        }
+
+        impl PartialOrd for MCProtocol {
+            fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+                self.as_i32().partial_cmp(&other.as_i32())
             }
         }
     }
@@ -84,7 +97,7 @@ pub trait MapEncodable {
     fn size_mapped(
         &self,
         protocol: MCProtocol,
-    ) -> anyhow::Result<minecraft_data_types::nums::VarInt>;
+    ) -> anyhow::Result<VarInt>;
 }
 
 #[async_trait::async_trait]
