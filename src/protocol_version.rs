@@ -55,6 +55,7 @@ macro_rules! protocol {
 protocol! {
     "Undefined" => 0 as Undefined,
     "1.17.1" => 756 as V1_17_1,
+    "1.18" => 757 as V1_18,
 }
 
 pub trait MapDecodable: Sized {

@@ -7,7 +7,7 @@ create_registry! {
     DeclareCommands {
         nodes: (VarInt, Vec<Node>),
         root_index: VarInt,
-        |LocalProtocol => (MCProtocol::V1_17_1) => (0x12);
+        |LocalProtocol => (MCProtocol::V1_17_1) + (MCProtocol::V1_18) => (0x12);
         |Protocol {
             (_) => (0x12) {
                 (anyhow::bail!("Unsupported version."))
@@ -18,7 +18,7 @@ create_registry! {
     PluginMessage {
         channel: Identifier,
         data: Vec<u8>,
-        |LocalProtocol => (MCProtocol::V1_17_1) => (0x18);
+        |LocalProtocol => (MCProtocol::V1_17_1) + (MCProtocol::V1_18) => (0x18);
         |Protocol {
             (_) => (0x18) {
                 (anyhow::bail!("Unsupported version."))
@@ -28,7 +28,7 @@ create_registry! {
 
     Disconnect {
         reason: Chat,
-        |LocalProtocol => (MCProtocol::V1_17_1) => (0x1A);
+        |LocalProtocol => (MCProtocol::V1_17_1) + (MCProtocol::V1_18) => (0x1A);
         |Protocol {
             (_) => (0x1A) {
                 (anyhow::bail!("Unsupported version."))

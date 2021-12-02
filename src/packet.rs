@@ -284,6 +284,8 @@ pub struct PacketReadWriteLocker<R: MovableAsyncRead, W: MovableAsyncWrite> {
     packet_reader: Arc<Mutex<PacketReader<R>>>,
 }
 
+pub type PacketReadWriteLockerSplit<R, W> = (Arc<Mutex<PacketReader<R>>>, Arc<Mutex<PacketWriter<W>>>);
+
 impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
     pub fn new(
         packet_writer: Arc<Mutex<PacketWriter<W>>>,
@@ -295,7 +297,7 @@ impl<R: MovableAsyncRead, W: MovableAsyncWrite> PacketReadWriteLocker<R, W> {
         }
     }
 
-    pub fn split(&self) -> (Arc<Mutex<PacketReader<R>>>, Arc<Mutex<PacketWriter<W>>>) {
+    pub fn split(&self) -> PacketReadWriteLockerSplit<R, W> {
         (
             Arc::clone(&self.packet_reader),
             Arc::clone(&self.packet_writer),
